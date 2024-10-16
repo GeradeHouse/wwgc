@@ -1,3 +1,8 @@
+Changes: Add a web server for serve the files and removes the firebase.  
+Only in local network, don't expose it to internet.  
+Need port forwarding to make 3d.html work.  
+Currently it cannot generate QR Code, you need to copy param url from "Save or load viewer parameters" and generate QR Code by your self.  
+
 Viewer profile generator
 ==================================
 

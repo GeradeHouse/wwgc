@@ -14,243 +14,213 @@
  * limitations under the License.
  */
 
-'use strict';
+'use strict'
 
 /*global alert, document, screen, window, init,
   THREE, WURFL, Firebase, screenfull, CARDBOARD, CONFIG, ga*/
 
 // meter units
-var CAMERA_HEIGHT = 0;
-var CAMERA_NEAR = 0.1;
-var CAMERA_FAR = 100;
+var CAMERA_HEIGHT = 0
+var CAMERA_NEAR = 0.1
+var CAMERA_FAR = 100
 
-var camera, scene, renderer, composer;
-var controls;
-var element, container;
+var camera, scene, renderer, composer
+var controls
+var element, container
 
-var clock = new THREE.Clock();
+var clock = new THREE.Clock()
 
 // Update the message text if on iOS
 if (!screenfull.enabled) {
-  document.getElementById("title").innerHTML = "Rotate phone horizontally";
+  document.getElementById("title").innerHTML = "Rotate phone horizontally"
 }
 
 function setMessageVisible(id, is_visible) {
-  var css_visibility = is_visible ? "block" : "none";
-  document.getElementById(id).style.display = css_visibility;
+  var css_visibility = is_visible ? "block" : "none"
+  document.getElementById(id).style.display = css_visibility
 }
 
 function isFullscreen() {
-  var screen_width = Math.max(window.screen.width, window.screen.height);
-  var screen_height = Math.min(window.screen.width, window.screen.height);
+  var screen_width = Math.max(window.screen.width, window.screen.height)
+  var screen_height = Math.min(window.screen.width, window.screen.height)
 
   return window.document.hasFocus() &&
-         (screen_width === window.innerWidth) &&
-         (screen_height === window.innerHeight);
+    (screen_width === window.innerWidth) &&
+    (screen_height === window.innerHeight)
 }
 
 function resize() {
-  var width = container.offsetWidth;
-  var height = container.offsetHeight;
+  var width = container.offsetWidth
+  var height = container.offsetHeight
 
-  camera.aspect = width / height;
-  camera.updateProjectionMatrix();
+  camera.aspect = width / height
+  camera.updateProjectionMatrix()
 
-  renderer.setSize(width, height);
-  renderer.setViewport(0, 0, width, height);
+  renderer.setSize(width, height)
+  renderer.setViewport(0, 0, width, height)
 
-  composer.setSize(width, height);
+  composer.setSize(width, height)
 
   if (WURFL.is_mobile) {
-    setMessageVisible('message_fullscreen', !isFullscreen());
+    setMessageVisible('message_fullscreen', !isFullscreen())
   }
 }
 
 function animate(t) {
-  var delta = clock.getDelta();
-  camera.updateProjectionMatrix();
-  controls.update(delta);
-  composer.render();
+  var delta = clock.getDelta()
+  camera.updateProjectionMatrix()
+  controls.update(delta)
+  composer.render()
 
-  window.requestAnimationFrame(animate);
+  window.requestAnimationFrame(animate)
 }
-
-if (CONFIG.GOOGLE_ANALYTICS_ID) {
-  ga('create', CONFIG.GOOGLE_ANALYTICS_ID, 'auto');
-  ga('send', 'pageview');
-}
-window.onerror = function(message, file, line, col, error) {
-  ga('send', 'exception', {
-    'exDescription': error ? error.stack : message,
-    'exFatal': true});
-};
 
 function setOrientationControls(e) {
   if (!e.alpha) {
-    return;
+    return
   }
 
-  controls = new THREE.DeviceOrientationControls(camera, true);
-  controls.connect();
-  controls.update();
+  controls = new THREE.DeviceOrientationControls(camera, true)
+  controls.connect()
+  controls.update()
+  // Android
+  element.addEventListener('click', function () {
+    // Must be called here because initiated by user
+    if (document.fullscreenEnabled) {
+      screen.wakelock.release()
+    } else {
+      element.requestFullscreen()
+      screen.wakelock.request()
+    }
 
-  if (screenfull.enabled) {
-    // Android
-    window.addEventListener('click', function() {
-      // Must be called here because initiated by user
-      if (screenfull.isFullscreen) {
-        screen.wakelock.release();
-      } else {
-        screen.wakelock.request();
-      }
+    screenfull.toggle()
+  })
 
-      screenfull.toggle();
-    });
+  document.addEventListener(screenfull.raw.fullscreenchange, function () {
+    if (screenfull.isFullscreen) {
+      // TODO: moz prefix for Firefox
+      screen.orientation.lock('landscape')
+    } else {
+      screen.orientation.unlock()
+    }
+  })
 
-    document.addEventListener(screenfull.raw.fullscreenchange, function() {
-      if (screenfull.isFullscreen) {
-        // TODO: moz prefix for Firefox
-        screen.orientation.lock('landscape');
-      } else {
-        screen.orientation.unlock();
-      }
-    });
-  } else {
-    // iOS
-    screen.wakelock.request();
-  }
-
-  window.removeEventListener('deviceorientation', setOrientationControls, true);
+  window.removeEventListener('deviceorientation', setOrientationControls, true)
 }
 
-function init_with_cardboard_device(firebase, cardboard_device) {
-  renderer = new THREE.WebGLRenderer();
-  element = renderer.domElement;
-  container = document.getElementById('example');
-  container.appendChild(element);
+// TODO: 把firebase的部分改成websocket
+/**
+ * @param ws {WebSocket}
+*/
+function init_with_cardboard_device(ws, cardboard_device) {
+  renderer = new THREE.WebGLRenderer()
+  element = renderer.domElement
+  element.onclick = () => {
+    element.requestFullscreen({})
+  }
+  container = document.getElementById('example')
+  container.appendChild(element)
 
-  scene = new THREE.Scene();
+  scene = new THREE.Scene()
 
   // NOTE: CardboardStereoPass will ignore camera FOV and aspect ratio
-  camera = new THREE.PerspectiveCamera(90, 1, CAMERA_NEAR, CAMERA_FAR);
-  camera.position.set(0, CAMERA_HEIGHT, 0);
-  scene.add(camera);
+  camera = new THREE.PerspectiveCamera(90, 1, CAMERA_NEAR, CAMERA_FAR)
+  camera.position.set(0, CAMERA_HEIGHT, 0)
+  scene.add(camera)
 
-  controls = new THREE.OrbitControls(camera, element);
-  controls.rotateUp(Math.PI / 4);
+  controls = new THREE.OrbitControls(camera, element)
+  controls.rotateUp(Math.PI / 4)
   controls.target.set(
     camera.position.x + 0.1,
     camera.position.y,
     camera.position.z
-  );
-  controls.noZoom = true;
-  controls.noPan = true;
+  )
+  controls.noZoom = true
+  controls.noPan = true
 
-  window.addEventListener('deviceorientation', setOrientationControls, true);
+  window.addEventListener('deviceorientation', setOrientationControls, true)
 
-  var light = new THREE.HemisphereLight(0x777777, 0x000000, 0.6);
-  scene.add(light);
+  var light = new THREE.HemisphereLight(0x777777, 0x000000, 0.6)
+  scene.add(light)
 
   // environment box with grid textures
-  var box_width = 10;  // i.e. surfaces are box_width/2 from camera
+  var box_width = 10  // i.e. surfaces are box_width/2 from camera
   var texture = THREE.ImageUtils.loadTexture(
     'textures/patterns/box.png'
-  );
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(box_width, box_width);
-  var face_colors = [0xA020A0, 0x20A020, 0x50A0F0, 0x404040, 0xA0A0A0, 0xA0A020];
-  var materialArray = [];
-  face_colors.forEach(function(c) {
-      materialArray.push(new THREE.MeshBasicMaterial({
-        map: texture,
-        color: c,
-        side: THREE.BackSide
-      }));
-    });
+  )
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(box_width, box_width)
+  var face_colors = [0xA020A0, 0x20A020, 0x50A0F0, 0x404040, 0xA0A0A0, 0xA0A020]
+  var materialArray = []
+  face_colors.forEach(function (c) {
+    materialArray.push(new THREE.MeshBasicMaterial({
+      map: texture,
+      color: c,
+      side: THREE.BackSide
+    }))
+  })
   var env_cube = new THREE.Mesh(
-      new THREE.BoxGeometry(box_width, box_width, box_width),
-      new THREE.MeshFaceMaterial(materialArray)
-  );
-  scene.add(env_cube);
+    new THREE.BoxGeometry(box_width, box_width, box_width),
+    new THREE.MeshFaceMaterial(materialArray)
+  )
+  scene.add(env_cube)
 
-  var screen_params = CARDBOARD.findScreenParams();
+  var screen_params = CARDBOARD.findScreenParams()
   var cardboard_view = new CARDBOARD.CardboardView(
-      screen_params, cardboard_device);
+    screen_params, cardboard_device)
 
-  composer = new THREE.EffectComposer(renderer);
+  composer = new THREE.EffectComposer(renderer)
 
   composer.addPass(new THREE.CardboardStereoEffect(
-      cardboard_view, scene, camera));
+    cardboard_view, scene, camera))
 
-  var barrel_distortion = new THREE.ShaderPass(THREE.CardboardBarrelDistortion);
+  var barrel_distortion = new THREE.ShaderPass(THREE.CardboardBarrelDistortion)
   // TODO: Consider having red background only when FOV angle fields
   // are in focus.
   barrel_distortion.uniforms.backgroundColor.value =
-      new THREE.Vector4(1, 0, 0, 1);
-  barrel_distortion.renderToScreen = true;
-  composer.addPass(barrel_distortion);
+    new THREE.Vector4(1, 0, 0, 1)
+  barrel_distortion.renderToScreen = true
+  composer.addPass(barrel_distortion)
 
-  firebase.on('value',
-      function (data) {
-        var val = data.val();
-        cardboard_view.device = CARDBOARD.uriToParams(val.params_uri);
-        CARDBOARD.updateBarrelDistortion(barrel_distortion, cardboard_view,
-            CAMERA_NEAR, CAMERA_FAR, val.show_lens_center);
-      });
+  // ws.on('value',
+  //   function (data) {
+  //     var val = data.val()
+  //     cardboard_view.device = CARDBOARD.uriToParams(val.params_uri)
+  //     CARDBOARD.updateBarrelDistortion(barrel_distortion, cardboard_view,
+  //       CAMERA_NEAR, CAMERA_FAR, val.show_lens_center)
+  //   })
+  ws.addEventListener('message', (event) => {
+    const val = JSON.parse(event.data)
+    cardboard_view.device = CARDBOARD.uriToParams(val.params_uri)
+    CARDBOARD.updateBarrelDistortion(barrel_distortion, cardboard_view,
+      CAMERA_NEAR, CAMERA_FAR, val.show_lens_center)
+  })
+  window.addEventListener('resize', resize, false)
+  window.setTimeout(resize, 1)
 
-  window.addEventListener('resize', resize, false);
-  window.setTimeout(resize, 1);
-
-  animate();
+  animate()
 }
 
 function hasWebGl() {
-  var canvas = document.createElement("canvas");
+  var canvas = document.createElement("canvas")
   try {
     return Boolean(canvas.getContext("webgl") ||
-                   canvas.getContext("experimental-webgl"));
+      canvas.getContext("experimental-webgl"))
   } catch (x) {
-    return false;
+    return false
   }
 }
 
 function init() {
   if (!hasWebGl()) {
-    console.log('WebGL not available');
-    setMessageVisible('message_webgl', true);
-    return;
+    console.log('WebGL not available')
+    setMessageVisible('message_webgl', true)
+    return
   }
-  var urlParams = new URLSearchParams(window.location.search);
-  var firebase_token = urlParams.get('u');
-  if (firebase_token) {
-    var config = {
-      apiKey: CONFIG.GOOGLE_API_KEY,
-      authDomain: CONFIG.FIREBASE_APP_URL,
-      databaseURL: CONFIG.FIREBASE_DB_URL
-    };
-    firebase.initializeApp(config);
-
-    var firebase_ref = firebase.database().ref();
-
-    var firebase_user = firebase_ref.child('users').child(firebase_token);
-    // TODO: display "waiting for data"
-    firebase_user.child('params_uri').once('value', function(data) {
-      var device = CARDBOARD.uriToParams(data.val());
-      init_with_cardboard_device(firebase_user, device);
-    });
-    // Maintain list of connections on this session
-    var firebase_connected = firebase_ref.child('.info/connected');
-    firebase_connected.on('value', function(is_connected) {
-      if (is_connected.val()) {
-        // TODO: have connections be list of device names
-        var entry = firebase_user.child('connections').push(true);
-        entry.onDisconnect().remove();
-      }
-    });
-  } else {
-    console.log("URL is missing session info:", window.location);
-  }
+  const websocket = new WebSocket('/datachannel')
+  // 用默认的参数初始化
+  const device = CARDBOARD.uriToParams('http://google.com/cardboard/cfg?p=CgN4eXMSBnBpY28gdR0xCCw9JY_CdT0qEAAASEIAAEhCAABcQgAAXEJYADUpXA89OggUrkc_SOGaP1AAYAA')
+  init_with_cardboard_device(websocket, device)
 }
-
-init();
+init()
