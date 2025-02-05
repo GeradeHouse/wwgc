@@ -1,0 +1,21 @@
+{
+  "name": "wwgc",
+  "version": "1.0.0",
+  "description": "- **Local Web Server:** A local web server has been added to serve the files, and Firebase integration has been removed.\r - **HTTPS Enabled:** The local web server now uses a secure HTTPS connection (with a self‐signed certificate) because VR functionality will not work over an insecure HTTP connection.\r - **Local Network Only:** This server is intended only for use within your local network. **Do not expose it to the internet.**\r - **Port Forwarding:** Port forwarding is required to access `3d.html` from your mobile device.\r - **QR Code Generation:** The app does not currently generate QR Codes automatically. Copy the URL from \"Save or load viewer parameters\" and use an external tool to create the QR Code.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@koa/router": "^13.1.0",
+    "koa": "^2.15.3",
+    "koa-send": "^5.0.1",
+    "koa-websocket": "^7.0.0"
+  }
+}

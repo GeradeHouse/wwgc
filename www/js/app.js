@@ -1,3 +1,5 @@
+// deno-lint-ignore-file no-unused-vars, prefer-const, no-var, no-window, no-window-prefix, no-inner-declarations
+
 /*!
  * Copyright 2015 Google Inc. All Rights Reserved.
  *
@@ -329,8 +331,17 @@ angular
     }
   })
 
-  .controller('myController', ['$scope', '$timeout', '$q', '$window', '$mdDialog',
-    function ($scope, $firebaseObject, $timeout, $q, $window, $mdDialog) {
+  .controller('myController', ['$scope', '$http', '$timeout', '$q', '$window', '$mdDialog',
+    function ($scope, $http, $timeout, $q, $window, $mdDialog) {
+      $http.get('/api/localip').then(function(response) {
+        let localIp = response.data.ip;
+        let newUrl = "http://" + localIp + ":8000/3d.html";
+        var link = document.getElementById("remote_link");
+        if (link) {
+          link.href = newUrl;
+        }
+        $scope.short_remote_link = newUrl;
+      });
       // Returns promise for shortUrl string.
       var getShortUrl = function (longUrl) {
         // 动态连接要关了，就不用短网址了
@@ -358,6 +369,29 @@ angular
       }
 
       $scope.alert = ''
+         // Establish WebSocket connection for live sync:
+         var ws = new WebSocket("wss://" + localIp + ":8000/datachannel");
+         ws.onopen = function() {
+           console.log("WebSocket connection established.");
+         };
+         ws.onmessage = function(event) {
+           try {
+             var data = JSON.parse(event.data);
+             if (data.type === "updateParams") {
+               console.log("Received parameter update:", data.params);
+               // Optionally, call updateViewerParameters(data.params) to update the VR scene
+             }
+           } catch (err) {
+             console.error("Error parsing WebSocket message:", err);
+           }
+         };
+         
+         // Watch for changes in parameters and notify the VR scene
+         $scope.$watch('params', function(newVal, oldVal) {
+           if (newVal !== oldVal && ws.readyState === WebSocket.OPEN) {
+             ws.send(JSON.stringify({ type: "updateParams", params: newVal }));
+           }
+         }, true);
 
       $scope.showDetailsModal = function (ev) {
         $mdDialog.show({
