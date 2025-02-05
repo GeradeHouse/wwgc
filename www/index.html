@@ -21,14 +21,28 @@
   <meta charset="UTF-8" />
   <title>Cardboard viewer profile generator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <!-- Define the missing global variable "locallp" as early as possible -->
+  
+  <!-- Global error handler for better debugging -->
   <script>
-    console.log("[DEBUG] Before setting locallp:", window.locallp);
-    if (!window.locallp) {
-      window.locallp = window.location.hostname;
-    }
-    console.log("[DEBUG] After setting locallp:", window.locallp);
+    window.onerror = function(message, source, lineno, colno, error) {
+      console.error("[DEBUG] Global error:", message, " at", source + ":" + lineno + ":" + colno);
+      return false;
+    };
   </script>
+
+  <!-- Ensure the missing global variable "locallp" is defined -->
+  <script>
+    try {
+      console.log("[DEBUG] Before setting locallp:", window.locallp);
+      if (!window.locallp) {
+        window.locallp = window.location.hostname;
+      }
+      console.log("[DEBUG] After setting locallp:", window.locallp);
+    } catch (e) {
+      console.error("[DEBUG] Error setting locallp:", e);
+    }
+  </script>
+
   <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/angular_material/0.9.4/angular-material.min.css">
