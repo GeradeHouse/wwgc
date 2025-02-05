@@ -53,3 +53,5 @@ webserver/localhost_rsa_traditional.key
 webserver/localhost_rsa.key
 webserver/localhost.crt
 checkCerts.ts
+localhost-key.pem
+localhost.pem

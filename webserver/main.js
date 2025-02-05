@@ -6,7 +6,7 @@ import fs from "fs/promises";
 import fsSync from "fs";
 import path from "path";
 import { promisify } from "util";
-import { exec } from "child_process";
+import { exec, execSync } from "child_process";
 import https from "https";
 import net from "net";
 
@@ -60,87 +60,121 @@ router.get("/api/localip", async (ctx) => {
 app.use(router.routes());
 app.use(router.allowedMethods());
 
+// Static file serving middleware with logging.
 app.use(async (ctx, next) => {
-  if (
-    ctx.request.url.pathname === "/" ||
-    ctx.request.url.pathname === "/index.html"
-  ) {
-    let content = await fs.readFile(
-      path.join(process.cwd(), "www", "index.html"),
-      "utf8"
-    );
-    const localIp = await getLocalIp();
-    content = content.replace(/localhost/g, localIp);
-    ctx.set("content-type", "text/html");
-    ctx.body = content;
+  console.log("Incoming request:", ctx.path);
+  // If the requested path is "/" or "/index.html" (or empty), serve index.html directly.
+  if (!ctx.path || ctx.path === "/" || ctx.path === "/index.html") {
+    const filePath = path.join(process.cwd(), "www", "index.html");
+    console.log("Attempting to serve index from:", filePath);
+    try {
+      let content = await fs.readFile(filePath, "utf8");
+      const localIp = await getLocalIp();
+      content = content.replace(/localhost/g, localIp);
+      ctx.set("content-type", "text/html");
+      ctx.body = content;
+      console.log("Successfully served index.html for", ctx.path);
+      return;
+    } catch (err) {
+      console.error("Error reading index.html at", filePath, err);
+      ctx.status = 500;
+      ctx.body = "Internal Server Error";
+      return;
+    }
   } else {
     try {
-      await send(ctx, ctx.request.url.pathname, {
+      await send(ctx, ctx.path, {
         root: path.join(process.cwd(), "www"),
         index: "index.html",
       });
-    } catch {
+    } catch (err) {
+      console.error("Error sending file for", ctx.path, err);
       await next();
     }
   }
 });
 
-// Setup HTTPS server using either Java trust store or mkcert certificates.
-// If the environment variable USE_JAVA_KEYSTORE is set (e.g., "true"),
-// the server will attempt to load the certificate from the Java trust store.
-// Note: The Java trust store (cacerts) does not include private keys.
-// Therefore, you must supply the path to the corresponding private key file
-// via the environment variable LOCAL_KEY_PATH.
-let certContent, keyContent;
-if (process.env.USE_JAVA_KEYSTORE === "true") {
-  console.log("Attempting to load certificate from Java trust store...");
+// Fallback middleware: Always serve index.html.
+// This ensures routes not matching a static asset will load the SPA.
+app.use(async (ctx) => {
+  const filePath = path.join(process.cwd(), "www", "index.html");
+  console.log("Default fallback: serving index.html for", ctx.path);
   try {
-    const javaKeystorePath = path.join(process.env.JAVA_HOME, "lib", "security", "cacerts");
-    // Export the certificate with alias "localhost" from the Java trust store.
-    // The cacerts file is protected by the default password "changeit".
-    const keytoolCmd = `keytool -exportcert -alias localhost -keystore "${javaKeystorePath}" -rfc -storepass changeit`;
-    const { stdout, stderr } = await execPromise(keytoolCmd);
-    if (stderr) console.error(stderr);
-    certContent = stdout;
-    // Load the private key from the file specified in LOCAL_KEY_PATH.
-    // This private key must correspond to the certificate in the trust store.
-    if (process.env.LOCAL_KEY_PATH) {
-      keyContent = await fs.readFile(process.env.LOCAL_KEY_PATH, "utf8");
-    } else {
-      throw new Error("LOCAL_KEY_PATH not provided. Please set the environment variable to the private key file path.");
-    }
-    console.log("Successfully loaded certificate from Java trust store.");
-  } catch (e) {
-    console.error("Failed to load certificate from Java trust store:", e);
+    let fallbackContent = await fs.readFile(filePath, "utf8");
+    const localIp = await getLocalIp();
+    fallbackContent = fallbackContent.replace(/localhost/g, localIp);
+    ctx.set("content-type", "text/html");
+    ctx.body = fallbackContent;
+  } catch (err) {
+    console.error("Fallback error reading index.html at", filePath, err);
+    ctx.status = 404;
+    ctx.body = "Not Found";
   }
-} else {
-  // Fallback: use mkcert-generated certificates in the webserver directory.
-  console.log("Attempting to load mkcert certificates from webserver directory...");
-  const certPath = path.join(process.cwd(), "webserver", "localhost.pem");
-  const keyPath = path.join(process.cwd(), "webserver", "localhost-key.pem");
+});
+
+// Simplified HTTPS Certificate Handling with mkcert check and auto-generation.
+console.log("Ensuring mkcert is installed and initialized...");
+
+async function ensureMkcertInstalled() {
   try {
-    await fs.stat(certPath);
-    await fs.stat(keyPath);
-    console.log("mkcert certificates found.");
-    certContent = await fs.readFile(certPath, "utf8");
-    keyContent = await fs.readFile(keyPath, "utf8");
+    execSync("mkcert -version", { stdio: "ignore" });
+    console.log("mkcert is already installed.");
   } catch (e) {
-    console.error("mkcert certificate files not found. Please run mkcert to generate certificates.", e);
+    console.log("mkcert is not installed. Installing mkcert via Chocolatey...");
+    try {
+      execSync("choco install mkcert -y", { stdio: "inherit" });
+      console.log("mkcert installed successfully.");
+    } catch (installError) {
+      console.error("Failed to install mkcert", installError);
+      throw installError;
+    }
+    try {
+      execSync("mkcert -install", { stdio: "inherit" });
+      console.log("mkcert has been initialized successfully.");
+    } catch (initError) {
+      console.error("Failed to initialize mkcert", initError);
+      throw initError;
+    }
   }
 }
 
-// Create and start the HTTPS server if we have both certificate and key.
-if (certContent && keyContent) {
+await ensureMkcertInstalled();
+
+console.log("Ensuring certificate files exist...");
+
+const certPath = path.join(process.cwd(), "localhost.pem");
+const keyPath = path.join(process.cwd(), "localhost-key.pem");
+
+async function ensureCertificates() {
+  if (!fsSync.existsSync(certPath) || !fsSync.existsSync(keyPath)) {
+    console.log("Certificates not found. Generating via mkcert...");
+    try {
+      execSync("mkcert localhost", { stdio: "inherit" });
+      console.log("Certificates generated successfully.");
+    } catch (error) {
+      console.error("Error generating certificates via mkcert", error);
+      throw error;
+    }
+  }
+  try {
+    const certContent = await fs.readFile(certPath, "utf8");
+    const keyContent = await fs.readFile(keyPath, "utf8");
+    return { cert: certContent, key: keyContent };
+  } catch (error) {
+    console.error("Error reading certificate files", error);
+    throw error;
+  }
+}
+
+try {
+  const credentials = await ensureCertificates();
   console.log("Starting secured HTTPS server on port 8000.");
-  const httpsServer = https.createServer(
-    { key: keyContent, cert: certContent },
-    app.callback()
-  );
+  const httpsServer = https.createServer(credentials, app.callback());
   httpsServer.listen(8000, "0.0.0.0", () => {
     console.log("Server is listening on https://localhost:8000");
   });
-} else {
-  console.error("Unable to start HTTPS server due to missing certificate or key.");
+} catch (error) {
+  console.error("Unable to start HTTPS server due to certificate issues:", error);
 }
 
 app.ws.use(wsRouter.routes());
