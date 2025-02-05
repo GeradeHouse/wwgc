@@ -1,4 +1,5 @@
-import { Application, Router, send } from '@oak/oak'
+/// <reference lib="deno" />
+import { Application, Router, send } from "https://deno.land/x/oak@v11.1.0/mod.ts";
 
 const clients: Array<WebSocket> = []
 
@@ -28,15 +29,15 @@ app.use(router.routes())
 app.use(async (ctx, next) => {
   try {
     await send(ctx, ctx.request.url.pathname, {
-      root: `${Deno.cwd()}/../www`,
+      root: `${Deno.cwd()}/www`,
       index: 'index.html',
     })
   } catch {
     await next()
   }
 })
-
+console.log("Server started on port 8000. Access it using your PC's local IP address for mobile devices.");
 await app.listen({
   port: 8000,
   hostname: '0.0.0.0',
-})
+});

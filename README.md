@@ -66,13 +66,19 @@ However, there are also a number of limitations to this approach:
 This implementation of Cardboard rendering is built on the three.js
 framework. If you're interested, see the Cardboard*.js source files.
 
-Running your own instance
--------------------------
+Running your own instance without Firebase (Option A)
+-------------------------------------------------------
+ 
+This fork has removed Firebase integration to simplify local deployment.
+To run your own instance:
+ 1. Launch the provided local web server (located in the "webserver" directory) to serve the static files.
+ 2. Configure port forwarding on your router for the web server's port to allow access to 3d.html from your mobile device.
+ 3. Use an external QR code generator (such as an online tool) to create a QR code from the URL displayed in "Save or load viewer parameters".
+ 
+No further configuration (e.g., Firebase settings) are required.
 
-Most viewer manufacturers can use the instance of the profile generator
-running [here](https://www.google.com/get/cardboard/viewerprofilegenerator.html).
-However, if you'd like to run your own instance, it's almost trivial. The web files can be served
-statically, but you'll need to edit the `config.js` source file to point
-to your own Firebase account and Google API key.
-
-See `firebase-security-rules.json` for an access control example.
+Running the Local Web Server
+----------------------------
+To launch the local web server on your PC, open a terminal in the project root and run:
+  deno run --allow-net --allow-read --allow-write --allow-env webserver/main.ts
+This command starts the web server on port 8000. Ensure that your router is configured for port forwarding if you intend to access the 3D calibration page (3d.html) from a mobile device on your local network.
