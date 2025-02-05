@@ -1,12 +1,12 @@
 <!--
  Copyright 2015 Google Inc. All Rights Reserved.
-
+ 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
-
+ 
     http://www.apache.org/licenses/LICENSE-2.0
-
+ 
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,6 +45,10 @@
 </head>
 
 <body ng-app="myApp" ng-controller="myController">
+  <script>
+    // Define the missing global variable "locallp"
+    var locallp = window.location.hostname;
+  </script>
   <div class="wrapper">
     <nav class="navbar">
       <div class="container">
@@ -81,7 +85,7 @@
           </div>
           <h1 class="animated fadeInUp">Success!</h1>
           <h4 class="animated fadeInUp">Here is the QR viewer profile generated for: <br /><b>{{ params.vendor }} {{
-              params.model }}</b></h4>
+                params.model }}</b></h4>
           <md-button class="md-flat md-large animated fadeInUp" ng-click="wizard_step = steps.WELCOME"> <img
               src="images/white_arrow.png" height="12" width="7" alt=" " /> Back to Form </md-button>
         </div>
@@ -120,7 +124,6 @@
                       <img src="images/well_sized_phone.png"/><br/>
                       <i>Sufficient smartphone screen size for viewer profile creation.</i>
                     </div>
-                    </ul>
                   </li>
                 </ol>
                 <p>If you encounter bugs in the tool or have suggestions for improvements, please drop us a line at <a href="mailto:wwgc@google.com">wwgc@google.com</a>.</p>
@@ -272,11 +275,11 @@
                 <div ng-if="params.vertical_alignment != vertical_alignment_type.CENTER">
                   <div class="form-group">
                     <p class="form-label">Tray to lens-center distance (mm)<md-button class="md-flat helper show-md"
-                        ng-click="$parent.focus='tray_to_lens_distance'; showDetailsModal($event);"><img
+                        ng-click="focus='tray_to_lens_distance'; showDetailsModal($event);"><img
                           src="images/help-grey.png" height="19" width="19" alt="?" /></md-button></p>
                     <input type="number" min="0" inputmode="numeric" class="form-control"
                       ng-model="params.tray_to_lens_distance" ng-change="save()" my-scale="1000" round-view="0"
-                      ng-focus="$parent.focus='tray_to_lens_distance'"
+                      ng-focus="focus='tray_to_lens_distance'"
                       onkeypress="return (event.charCode >= 48 && event.charCode <= 57 || event.charCode == 46)" />
                   </div>
                 </div>
@@ -289,7 +292,7 @@
                       <small style="font-size: 70%">k<sub>{{name}}</sub></small> <input class="form-control"
                         name="k{{name}}" type="number" inputmode="numeric"
                         ng-model="params.distortion_coefficients[$index]" step=".01" ng-change="save()" round-view="2"
-                        ng-focus="$parent.focus='distortion_coefficients'"
+                        ng-focus="focus='distortion_coefficients'"
                         style="width: 5.5em; display: inline; margin-right: 1em;"
                         onkeypress="return (event.charCode >= 48 && event.charCode <= 57)" ng-non-zero /> <span
                         style="color:red; font-size: 16px;" ng-show="parameters.k{{name}}.$invalid">k<sub>{{name}}</sub>
@@ -334,7 +337,6 @@
                 </div>
               </form>
               <div class="col-sm-6" ng-if="wizard_step == steps.WELCOME">
-                <!-- TODO: declare context help together with input field somehow? -->
                 <div class="product-help" affix>
                   <div class="alert alert-tooltip">
                     <div ng-if="focus == 'vendor' || focus == null">
@@ -378,7 +380,6 @@
                     </div>
                   </div>
                 </div>
-                <!-- Form ends here!! -->
               </div>
             </div>
           </div>
