@@ -21,6 +21,14 @@
   <meta charset="UTF-8" />
   <title>Cardboard viewer profile generator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- Define the missing global variable "locallp" as early as possible -->
+  <script>
+    console.log("[DEBUG] Before setting locallp:", window.locallp);
+    if (!window.locallp) {
+      window.locallp = window.location.hostname;
+    }
+    console.log("[DEBUG] After setting locallp:", window.locallp);
+  </script>
   <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/angular_material/0.9.4/angular-material.min.css">
@@ -45,10 +53,6 @@
 </head>
 
 <body ng-app="myApp" ng-controller="myController">
-  <script>
-    // Define the missing global variable "locallp"
-    var locallp = window.location.hostname;
-  </script>
   <div class="wrapper">
     <nav class="navbar">
       <div class="container">
@@ -247,7 +251,7 @@
                     class="form-control" ng-model="params.screen_to_lens_distance" ng-change="save()" my-scale="1000"
                     round-view="0" ng-focus="focus='screen_to_lens_distance'"
                     onkeypress="return (event.charCode >= 48 && event.charCode <= 57 || event.charCode == 46)"
-                    ng-change="params.screen_to_lens_distance = this.value; alert(this.value(); save()" />
+                    ng-change="params.screen_to_lens_distance = this.value; alert(this.value()); save()" />
                 </div>
                 <div class="form-group">
                   <p class="form-label">Inter-lens distance (mm)<md-button class="md-flat helper show-md"

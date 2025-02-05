@@ -65,12 +65,15 @@ app.use(async (ctx, next) => {
   console.log("Incoming request:", ctx.path);
   // If the requested path is "/" or "/index.html" (or empty), serve index.html directly.
   if (!ctx.path || ctx.path === "/" || ctx.path === "/index.html") {
+    console.log("[DEBUG] Serving index.html for:", ctx.path);
     const filePath = path.join(process.cwd(), "www", "index.html");
     console.log("Attempting to serve index from:", filePath);
     try {
       let content = await fs.readFile(filePath, "utf8");
       const localIp = await getLocalIp();
+      console.log("[DEBUG] Replacing 'localhost' with:", localIp);
       content = content.replace(/localhost/g, localIp);
+      console.log("[DEBUG] Content length:", content.length);
       ctx.set("content-type", "text/html");
       ctx.body = content;
       console.log("Successfully served index.html for", ctx.path);
