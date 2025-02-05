@@ -1,11 +1,12 @@
 var CONFIG = {
-  FIREBASE_APP_URL: 'https://MY_PROJECT.firebaseapp.com',
-  // URL of your Firebase instance
-  FIREBASE_DB_URL: 'https://MY_PROJECT.firebaseio.com/',
-  // Public key for Google API
+  // Firebase integration is disabled in local mode.
+  FIREBASE_APP_URL: '',
+  // Firebase database URL is not used.
+  FIREBASE_DB_URL: '',
+  // Public key for Google API (if needed for other features)
   GOOGLE_API_KEY: 'MY_KEY',
-  // Analytics tracking ID (empty string to disable)
+  // Analytics tracking ID (empty string disables analytics)
   GOOGLE_ANALYTICS_ID: '',
-  // Firebase Dynamic Links project, for short links
-  DYNAMIC_URL_BASE: 'https://MY_DYNAMIC_LINKS_PROJECT.page.link',
+  // Firebase Dynamic Links project is not used.
+  DYNAMIC_URL_BASE: ''
 };
