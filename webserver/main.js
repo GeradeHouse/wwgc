@@ -1,6 +1,3 @@
-// Note: This code is now implemented in Node.js using Koa and koa-websocket.
-// The original Deno reference has been removed since Node.js does not use it.
-
 import Koa from "koa";
 import Router from "@koa/router";
 import send from "koa-send";
@@ -13,19 +10,16 @@ import { exec } from "child_process";
 import https from "https";
 import net from "net";
 
-// Promisify exec for command execution.
 const execPromise = promisify(exec);
 
-// Create a websocket-enabled Koa application.
 const app = websockify(new Koa());
 const router = new Router();
 const wsRouter = new Router();
 
-const clients = []; // Array of WebSocket connections.
+const clients = [];
 
 async function getLocalIp() {
   try {
-    // Create a connection to 8.8.8.8:53 to obtain the local IP.
     return new Promise((resolve) => {
       const socket = net.createConnection(53, "8.8.8.8", function () {
         const addr = socket.address();
@@ -42,7 +36,6 @@ async function getLocalIp() {
 }
 
 wsRouter.get("/datachannel", (ctx) => {
-  // In koa-websocket, the WebSocket is available as ctx.websocket.
   if (!ctx.websocket) {
     ctx.body = { err: "need to connect this by ws" };
     return;
@@ -77,7 +70,6 @@ app.use(async (ctx, next) => {
       "utf8"
     );
     const localIp = await getLocalIp();
-    // Replace all occurrences of "localhost" with your PC's local IP address.
     content = content.replace(/localhost/g, localIp);
     ctx.set("content-type", "text/html");
     ctx.body = content;
@@ -93,71 +85,53 @@ app.use(async (ctx, next) => {
   }
 });
 
-// Ensure that the certificate and key files exist (or generate them if not).
-async function ensureCertificates() {
+// Setup HTTPS server using either Java trust store or mkcert certificates.
+// If the environment variable USE_JAVA_KEYSTORE is set (e.g., "true"),
+// the server will attempt to load the certificate from the Java trust store.
+// Note: The Java trust store (cacerts) does not include private keys.
+// Therefore, you must supply the path to the corresponding private key file
+// via the environment variable LOCAL_KEY_PATH.
+let certContent, keyContent;
+if (process.env.USE_JAVA_KEYSTORE === "true") {
+  console.log("Attempting to load certificate from Java trust store...");
   try {
-    await fs.stat(path.join(process.cwd(), "webserver", "localhost.crt"));
-    await fs.stat(
-      path.join(process.cwd(), "webserver", "localhost_rsa_traditional.key")
-    );
-    console.log("Certificate and RSA key exist.");
-  } catch {
-    console.log("Certificate or RSA key not found. Generating using OpenSSL...");
-    // Generate a traditional RSA private key.
-    try {
-      const { stdout, stderr } = await execPromise(
-        'openssl genrsa -traditional -out webserver/localhost_rsa_traditional.key 4096'
-      );
-      console.log(stdout);
-      if (stderr) console.error(stderr);
-    } catch (e) {
-      console.error(e);
+    const javaKeystorePath = path.join(process.env.JAVA_HOME, "lib", "security", "cacerts");
+    // Export the certificate with alias "localhost" from the Java trust store.
+    // The cacerts file is protected by the default password "changeit".
+    const keytoolCmd = `keytool -exportcert -alias localhost -keystore "${javaKeystorePath}" -rfc -storepass changeit`;
+    const { stdout, stderr } = await execPromise(keytoolCmd);
+    if (stderr) console.error(stderr);
+    certContent = stdout;
+    // Load the private key from the file specified in LOCAL_KEY_PATH.
+    // This private key must correspond to the certificate in the trust store.
+    if (process.env.LOCAL_KEY_PATH) {
+      keyContent = await fs.readFile(process.env.LOCAL_KEY_PATH, "utf8");
+    } else {
+      throw new Error("LOCAL_KEY_PATH not provided. Please set the environment variable to the private key file path.");
     }
-    // Generate a self-signed certificate using the generated RSA key.
-    try {
-      const { stdout, stderr } = await execPromise(
-        'openssl req -x509 -new -key webserver/localhost_rsa_traditional.key -out webserver/localhost.crt -days 365 -nodes -subj "/CN=localhost"'
-      );
-      console.log(stdout);
-      if (stderr) console.error(stderr);
-    } catch (e) {
-      console.error(e);
-    }
+    console.log("Successfully loaded certificate from Java trust store.");
+  } catch (e) {
+    console.error("Failed to load certificate from Java trust store:", e);
+  }
+} else {
+  // Fallback: use mkcert-generated certificates in the webserver directory.
+  console.log("Attempting to load mkcert certificates from webserver directory...");
+  const certPath = path.join(process.cwd(), "webserver", "localhost.pem");
+  const keyPath = path.join(process.cwd(), "webserver", "localhost-key.pem");
+  try {
+    await fs.stat(certPath);
+    await fs.stat(keyPath);
+    console.log("mkcert certificates found.");
+    certContent = await fs.readFile(certPath, "utf8");
+    keyContent = await fs.readFile(keyPath, "utf8");
+  } catch (e) {
+    console.error("mkcert certificate files not found. Please run mkcert to generate certificates.", e);
   }
 }
 
-await ensureCertificates();
-
-async function waitForCertificates(timeout = 5000) {
-  const start = Date.now();
-  while (Date.now() - start < timeout) {
-    try {
-      await fs.stat(path.join(process.cwd(), "webserver", "localhost.crt"));
-      await fs.stat(
-        path.join(process.cwd(), "webserver", "localhost_rsa_traditional.key")
-      );
-      return true;
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-  }
-  return false;
-}
-
-console.log("Attempting to start HTTPS server on port 8000...");
-if (await waitForCertificates()) {
+// Create and start the HTTPS server if we have both certificate and key.
+if (certContent && keyContent) {
   console.log("Starting secured HTTPS server on port 8000.");
-  console.log("HTTPS server running at https://localhost:8000");
-  // Read the certificate and key file contents.
-  const certContent = await fs.readFile(
-    path.join(process.cwd(), "webserver", "localhost.crt"),
-    "utf8"
-  );
-  const keyContent = await fs.readFile(
-    path.join(process.cwd(), "webserver", "localhost_rsa_traditional.key"),
-    "utf8"
-  );
-  // Create HTTPS server using Node's https module and Koa's callback.
   const httpsServer = https.createServer(
     { key: keyContent, cert: certContent },
     app.callback()
@@ -166,9 +140,8 @@ if (await waitForCertificates()) {
     console.log("Server is listening on https://localhost:8000");
   });
 } else {
-  console.error("Certificate files still not found after waiting.");
+  console.error("Unable to start HTTPS server due to missing certificate or key.");
 }
 
-/* Attach WebSocket routes. */
 app.ws.use(wsRouter.routes());
 app.ws.use(wsRouter.allowedMethods());
