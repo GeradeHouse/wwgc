@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
- "use strict";
+"use strict";
 
- /*globals document, window, CARDBOARD, WURFL, THREE*/
+/*globals document, window, CARDBOARD, WURFL, THREE*/
 
- CARDBOARD.CardboardView = function(screen_params, device_params) {
+CARDBOARD.CardboardView = function(screen_params, device_params) {
   this.screen = screen_params;
   this.device = device_params;
 };
@@ -35,26 +35,26 @@ CARDBOARD.CardboardView.prototype = {
     var eyeToScreenDist = cdp.screen_to_lens_distance;
 
     var outerDist = (screen.width_meters - cdp.inter_lens_distance) / 2;
-    var innerDist =  cdp.inter_lens_distance / 2;
+    var innerDist = cdp.inter_lens_distance / 2;
     var bottomDist = CARDBOARD.getYEyeOffsetMeters(screen, cdp);
     var topDist = screen.height_meters - bottomDist;
 
     var outerAngle = THREE.Math.radToDeg(Math.atan(
-        distortion.distort(outerDist / eyeToScreenDist)));
+      distortion.distort(outerDist / eyeToScreenDist)));
     var innerAngle = THREE.Math.radToDeg(Math.atan(
-        distortion.distort(innerDist / eyeToScreenDist)));
+      distortion.distort(innerDist / eyeToScreenDist)));
     var bottomAngle = THREE.Math.radToDeg(Math.atan(
-        distortion.distort(bottomDist / eyeToScreenDist)));
+      distortion.distort(bottomDist / eyeToScreenDist)));
     var topAngle = THREE.Math.radToDeg(Math.atan(
-        distortion.distort(topDist / eyeToScreenDist)));
+      distortion.distort(topDist / eyeToScreenDist)));
 
     var maxFov = cdp.left_eye_field_of_view_angles;  // L, R, T, B
 
     return {
-      left:     Math.min(outerAngle, maxFov[0]),
-      right:    Math.min(innerAngle, maxFov[1]),
-      bottom:   Math.min(bottomAngle, maxFov[3]),
-      top:      Math.min(topAngle, maxFov[2]),
+      left: Math.min(outerAngle, maxFov[0]),
+      right: Math.min(innerAngle, maxFov[1]),
+      bottom: Math.min(bottomAngle, maxFov[3]),
+      top: Math.min(topAngle, maxFov[2]),
     };
   },
 
@@ -93,11 +93,9 @@ CARDBOARD.CardboardView.prototype = {
     result.fov.top = THREE.Math.radToDeg(Math.atan(topDist));
 
     result.viewport.x = Math.round((eyePosX - outerDist) * xPxPerTanAngle);
-    result.viewport.width = Math.round((eyePosX + innerDist) * xPxPerTanAngle)
-    - result.viewport.x;
+    result.viewport.width = Math.round((eyePosX + innerDist) * xPxPerTanAngle) - result.viewport.x;
     result.viewport.y = Math.round((eyePosY - bottomDist) * yPxPerTanAngle);
-    result.viewport.height = Math.round((eyePosY + topDist) * yPxPerTanAngle)
-    - result.viewport.y;
+    result.viewport.height = Math.round((eyePosY + topDist) * yPxPerTanAngle) - result.viewport.y;
 
     return result;
   },
@@ -110,8 +108,7 @@ Object.defineProperties(CARDBOARD.CardboardView.prototype, {
     },
     set: function(value) {
       this._device = value;
-      this.distortion = new CARDBOARD.DistortionParams(
-        value.distortion_coefficients);
+      this.distortion = new CARDBOARD.DistortionParams(value.distortion_coefficients);
     },
   },
 });
@@ -135,19 +132,17 @@ Object.defineProperties(CARDBOARD.ScreenParams.prototype, {
     get: function () {
       return this.height / this.dpi * METERS_PER_INCH;
     },
-  }
+  },
 });
 
 // Returns Y offset from bottom of given physical screen to lens center.
 CARDBOARD.getYEyeOffsetMeters = function(screen_params, device_params) {
-  var VerticalAlignmentType =
-  CARDBOARD.DeviceParams.VerticalAlignmentType;
+  var VerticalAlignmentType = CARDBOARD.DeviceParams.VerticalAlignmentType;
   switch (device_params.vertical_alignment) {
     case VerticalAlignmentType.BOTTOM:
       return device_params.tray_to_lens_distance - screen_params.border_size_meters;
     case VerticalAlignmentType.TOP:
-      return screen_params.height_meters -
-        (device_params.tray_to_lens_distance - screen_params.border_size_meters);
+      return screen_params.height_meters - (device_params.tray_to_lens_distance - screen_params.border_size_meters);
     default:  // VerticalAlignmentType.CENTER
       return screen_params.height_meters / 2;
   }
@@ -192,16 +187,14 @@ CARDBOARD.DistortionParams.prototype = {
 };
 
 CARDBOARD.getProjectionMatrixPair = function(left_fov_angles, near, far) {
-  var outer = Math.tan( THREE.Math.degToRad( left_fov_angles.left )) * near;
-  var inner = Math.tan( THREE.Math.degToRad( left_fov_angles.right )) * near;
-  var bottom = Math.tan( THREE.Math.degToRad( left_fov_angles.bottom )) * near;
-  var top = Math.tan( THREE.Math.degToRad( left_fov_angles.top )) * near;
+  var outer = Math.tan(THREE.Math.degToRad(left_fov_angles.left)) * near;
+  var inner = Math.tan(THREE.Math.degToRad(left_fov_angles.right)) * near;
+  var bottom = Math.tan(THREE.Math.degToRad(left_fov_angles.bottom)) * near;
+  var top = Math.tan(THREE.Math.degToRad(left_fov_angles.top)) * near;
 
   return {
-    left:
-    new THREE.Matrix4().makeFrustum(-outer, inner, -bottom, top, near, far),
-    right:
-    new THREE.Matrix4().makeFrustum(-inner, outer, -bottom, top, near, far),
+    left: new THREE.Matrix4().makeFrustum(-outer, inner, -bottom, top, near, far),
+    right: new THREE.Matrix4().makeFrustum(-inner, outer, -bottom, top, near, far),
   };
 };
 
@@ -215,30 +208,23 @@ CARDBOARD.updateBarrelDistortion = function(barrel_distortion, cardboard_view,
   // texture space [0..1] and NDC [-1..1] as well as accounting for the
   // viewport on the screen.
   // TODO: have explicit viewport transform in shader for simplicity
-  var projections = CARDBOARD.getProjectionMatrixPair(
-    cardboard_view.getLeftEyeFov(), camera_near, camera_far);
-  barrel_distortion.uniforms.distortion.value
-  .set(coefficients[0], coefficients[1]);
+  var projections = CARDBOARD.getProjectionMatrixPair(cardboard_view.getLeftEyeFov(), camera_near, camera_far);
+  barrel_distortion.uniforms.distortion.value.set(coefficients[0], coefficients[1]);
   var elements = projections.left.elements;
   barrel_distortion.uniforms.projectionLeft.value
-  .set(elements[4*0 + 0], elements[4*1 + 1],
-   elements[4*2 + 0] - 1, elements[4*2 + 1] - 1)
-  .divideScalar(2);
+    .set(elements[0], elements[5], elements[10] - 1, elements[15] - 1)
+    .divideScalar(2);
   var no_lens_view = cardboard_view.getLeftEyeFovAndViewportNoDistortionCorrection();
   var viewport = no_lens_view.viewport;
-  var unprojections = CARDBOARD.getProjectionMatrixPair(
-    no_lens_view.fov, camera_near, camera_far);
+  var unprojections = CARDBOARD.getProjectionMatrixPair(no_lens_view.fov, camera_near, camera_far);
   elements = unprojections.left.elements;
   var x_scale = viewport.width / (cardboard_view.screen.width / 2);
   var y_scale = viewport.height / cardboard_view.screen.height;
-  var x_trans = 2 * (viewport.x + viewport.width / 2) /
-  (cardboard_view.screen.width / 2) - 1;
-  var y_trans = 2 * (viewport.y + viewport.height / 2) /
-  cardboard_view.screen.height - 1;
+  var x_trans = 2 * (viewport.x + viewport.width / 2) / (cardboard_view.screen.width / 2) - 1;
+  var y_trans = 2 * (viewport.y + viewport.height / 2) / cardboard_view.screen.height - 1;
   barrel_distortion.uniforms.unprojectionLeft.value
-  .set(elements[4*0 + 0] * x_scale, elements[4*1 + 1] * y_scale,
-   elements[4*2 + 0] - 1 - x_trans, elements[4*2 + 1] - 1 - y_trans)
-  .divideScalar(2);
+    .set(elements[0] * x_scale, elements[5] * y_scale, elements[10] - 1 - x_trans, elements[15] - 1 - y_trans)
+    .divideScalar(2);
   barrel_distortion.uniforms.showCenter.value = show_center ? 1 : 0;
 };
 
@@ -247,29 +233,27 @@ CARDBOARD.updateBarrelDistortion = function(barrel_distortion, cardboard_view,
 // otherwise the key is expected to match exactly.
 CARDBOARD.SCREEN_PPI_BY_DEVICE = {
   // Device name                [ PPI, (/Regex/) ]
-  'Apple iPhone 6':             [ 326 ],
-  'Apple iPhone 6 Plus':        [ 401 ],
-  'Google Nexus 5':             [ 445 ],
-  'Google Nexus 6':             [ 493 ],
-  'Motorola Moto X':            [ 312, / XT10(52|53|55|56|58|60) / ],
-  'Samsung Galaxy S III':       [ 306, /\(Galaxy S III\)/ ],
-  'Samsung Galaxy S4':          [ 441, /\(Galaxy S4\)/ ],
-  'Samsung Galaxy S5':          [ 432, /\(Galaxy S5\)/ ],
+  'Apple iPhone 6': [326],
+  'Apple iPhone 6 Plus': [401],
+  'Google Nexus 5': [445],
+  'Google Nexus 6': [493],
+  'Motorola Moto X': [312, / XT10(52|53|55|56|58|60) /],
+  'Samsung Galaxy S III': [306, /\(Galaxy S III\)/],
+  'Samsung Galaxy S4': [441, /\(Galaxy S4\)/],
+  'Samsung Galaxy S5': [432, /\(Galaxy S5\)/],
 };
 
 function _createCookie(path, name, value, days) {
   var date = new Date();
-  date.setTime(date.getTime()+(days*24*60*60*1000));
-  document.cookie = name+"="+value+
-  "; expires="+date.toGMTString()+
-  "; path="+path;
+  date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+  document.cookie = name + "=" + value + "; expires=" + date.toGMTString() + "; path=" + path;
 }
 
 function _readCookie(name) {
   var nameEQ = name + "=";
   var ca = document.cookie.split(';');
   var i, c;
-  for (i=0; i < ca.length; i++) {
+  for (i = 0; i < ca.length; i++) {
     c = ca[i];
     while (c.charAt(0) === ' ') {
       c = c.substring(1, c.length);
@@ -295,8 +279,7 @@ CARDBOARD.findScreenParams = function() {
     // try regex match
     for (device_name in CARDBOARD.SCREEN_PPI_BY_DEVICE) {
       ppi_entry = CARDBOARD.SCREEN_PPI_BY_DEVICE[device_name];
-      if (ppi_entry.length > 1 &&
-        WURFL.complete_device_name.match(ppi_entry[1])) {
+      if (ppi_entry.length > 1 && WURFL.complete_device_name.match(ppi_entry[1])) {
         ppi = ppi_entry[0];
         console.log('Detected', device_name);
         break;
@@ -305,14 +288,12 @@ CARDBOARD.findScreenParams = function() {
   }
   if (WURFL.is_mobile) {
     if (!ppi) {
-      console.log('Mobile device display properties unknown:',
-        WURFL.complete_device_name);
+      console.log('Mobile device display properties unknown:', WURFL.complete_device_name);
       ppi = Number(_readCookie('ppi'));
       if (ppi > 0) {
         console.log('PPI from cookie:', ppi);
       } else {
-        ppi = Number(window.prompt("Mobile device display properties " +
-          "unknown. Enter pixels per inch (PPI) value of your device:"));
+        ppi = Number(window.prompt("Mobile device display properties unknown. Enter pixels per inch (PPI) value of your device:"));
         if (ppi > 0) {
           _createCookie(window.location.pathname, 'ppi', ppi, 9999);
         } else {
@@ -320,13 +301,88 @@ CARDBOARD.findScreenParams = function() {
         }
       }
     }
-    var screen_width = Math.max(window.screen.width, window.screen.height) *
-    window.devicePixelRatio;
-    var screen_height = Math.min(window.screen.width, window.screen.height) *
-    window.devicePixelRatio;
-    return new CARDBOARD.ScreenParams(screen_width, screen_height, ppi,
-      0.003 /*bezel height*/);
+    var screen_width = Math.max(window.screen.width, window.screen.height) * window.devicePixelRatio;
+    var screen_height = Math.min(window.screen.width, window.screen.height) * window.devicePixelRatio;
+    return new CARDBOARD.ScreenParams(screen_width, screen_height, ppi, 0.003 /*bezel height*/);
   }
   // generic values for desktop
   return new CARDBOARD.ScreenParams(1920, 1080, 445, 0);
 };
+
+/* WebSocket Live Sync for Viewer Parameters (3D Viewer) */
+(function(){
+  const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+  const socketUrl = protocol + window.location.host + '/ws';
+  const ws = new WebSocket(socketUrl);
+  
+  ws.onopen = function() {
+    console.debug(`[${new Date().toISOString()}] [3D Viewer] Live Sync WebSocket connected at ${socketUrl}`);
+  };
+  
+  ws.onmessage = function(event) {
+    const receiveTime = Date.now();
+    console.debug(`[${new Date().toISOString()}] [3D Viewer] Received raw WS message: ${event.data}`);
+    try {
+      const data = JSON.parse(event.data);
+      let updated = false;
+      if (data.screen_to_lens_distance !== undefined) {
+        console.debug(`[${new Date().toISOString()}] [3D Viewer] Received screen_to_lens_distance update: ${data.screen_to_lens_distance}`);
+        if(typeof cdp !== 'undefined') {
+          cdp.screen_to_lens_distance = data.screen_to_lens_distance;
+        } else {
+          console.warn(`[${new Date().toISOString()}] [3D Viewer] Warning: 'cdp' (device parameters) is undefined.`);
+        }
+        if(data.sentTime){
+          const latency = receiveTime - new Date(data.sentTime).getTime();
+          console.debug(`[${new Date().toISOString()}] [3D Viewer] Latency for screen_to_lens_distance update: ${latency} ms`);
+        }
+        updated = true;
+      }
+      if (data.inter_lens_distance !== undefined) {
+        console.debug(`[${new Date().toISOString()}] [3D Viewer] Received inter_lens_distance update: ${data.inter_lens_distance}`);
+        if(typeof cdp !== 'undefined') {
+          cdp.inter_lens_distance = data.inter_lens_distance;
+        } else {
+          console.warn(`[${new Date().toISOString()}] [3D Viewer] Warning: 'cdp' (device parameters) is undefined.`);
+        }
+        if(data.sentTime){
+          const latency = receiveTime - new Date(data.sentTime).getTime();
+          console.debug(`[${new Date().toISOString()}] [3D Viewer] Latency for inter_lens_distance update: ${latency} ms`);
+        }
+        updated = true;
+      }
+      if (updated) {
+        console.debug(`[${new Date().toISOString()}] [3D Viewer] Initiating scene update with new parameters.`);
+        recalcParameters();
+        console.debug(`[${new Date().toISOString()}] [3D Viewer] Scene update complete.`);
+      }
+    } catch(e) {
+      console.error(`[${new Date().toISOString()}] [3D Viewer] Error parsing WS message:`, e);
+    }
+  };
+  
+  ws.onerror = function(event) {
+    console.error(`[${new Date().toISOString()}] [3D Viewer] Live Sync WebSocket error:`, event);
+  };
+  
+  ws.onclose = function() {
+    console.debug(`[${new Date().toISOString()}] [3D Viewer] Live Sync WebSocket disconnected.`);
+  };
+  
+  function recalcParameters() {
+    // Recalculate derived parameters based on updated values
+    if(typeof cdp === 'undefined') {
+      console.warn(`[${new Date().toISOString()}] [3D Viewer] Cannot recalc parameters because 'cdp' is undefined.`);
+      return;
+    }
+    var eyeToScreenDist = cdp.screen_to_lens_distance;
+    var halfLensDistance = cdp.inter_lens_distance / 2 / eyeToScreenDist;
+    console.debug(`[${new Date().toISOString()}] [3D Viewer] Recalculated parameters: eyeToScreenDist=${eyeToScreenDist}, halfLensDistance=${halfLensDistance}`);
+    
+    if (typeof updateScene === 'function') {
+      updateScene();
+    } else {
+      console.warn(`[${new Date().toISOString()}] [3D Viewer] updateScene function not found. Scene not updated.`);
+    }
+  }
+})();

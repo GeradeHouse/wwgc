@@ -108,7 +108,7 @@ function setOrientationControls(e) {
   window.removeEventListener('deviceorientation', setOrientationControls, true)
 }
 
-// TODO: 把firebase的部分改成websocket
+// TODO: websocket
 /**
  * @param ws {WebSocket}
 */
@@ -238,9 +238,27 @@ function init() {
     setMessageVisible('message_webgl', true)
     return
   }
-  const websocket = new WebSocket('/datachannel')
+  const websocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws')
+
+// Debug logging for 3D app WebSocket events
+websocket.onopen = function() {
+  console.log('[DEBUG] WebSocket connected (3D app).');
+};
+websocket.onerror = function(event) {
+  console.error('[DEBUG] WebSocket error (3D app):', event);
+};
+websocket.onclose = function() {
+  console.log('[DEBUG] WebSocket disconnected (3D app).');
+};
+
   // 用默认的参数初始化
   const device = CARDBOARD.uriToParams('http://google.com/cardboard/cfg?p=CgN4eXMSBnBpY28gdR0xCCw9JY_CdT0qEAAASEIAAEhCAABcQgAAXEJYADUpXA89OggUrkc_SOGaP1AAYAA')
   init_with_cardboard_device(websocket, device)
+  websocket.onerror = function(e) {
+    console.error('[DEBUG] WebSocket error (3D app):', e);
+  };
+  websocket.onclose = function() {
+    console.log('[DEBUG] WebSocket disconnected (3D app).');
+  };
 }
 init()

@@ -435,7 +435,6 @@ $timeout(function() {
         id_attribute: 'vertical_alignment_touch',
       }]
 
-
       $scope.button_type = DeviceParams.ButtonType
       $scope.button_type_options = [{
         id: DeviceParams.ButtonType.NONE,
@@ -454,7 +453,6 @@ $timeout(function() {
         id_attribute: 'primary_button_indirect_touch',
         text: 'Indirect Touch',
       }]
-
 
       $scope.alerts = []
       $scope.focus = null
@@ -479,35 +477,37 @@ $timeout(function() {
         "has_magnet": false,
         "primary_button": DeviceParams.ButtonType.NONE,
       }
-      $scope.ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/datachannel")
+      // Initialize WebSocket connection with automatic reconnection
+      function connectWebSocket() {
+        $scope.ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/ws");
+        $scope.ws.onopen = function() {
+          console.log(`[${new Date().toISOString()}] [Form Interface] WebSocket connected.`);
+          if ($scope.pendingSave) {
+            $scope.pendingSave = false;
+            $scope.save();
+          }
+        };
+        $scope.ws.onerror = function(e) {
+          console.error(`[${new Date().toISOString()}] [Form Interface] WebSocket error:`, e);
+        };
+        $scope.ws.onclose = function() {
+          console.warn(`[${new Date().toISOString()}] [Form Interface] WebSocket closed. Reconnecting...`);
+          setTimeout(connectWebSocket, 1000);
+        };
+      }
+      connectWebSocket();
       $scope.save = function () {
-        // Ensure tray_to_lens_distance has nominal value for best-effort
-        // support of apps using older revsion of params proto.
-        // TODO: reference a defaults singleton
-
-        if ($scope.params.vertical_alignment ===
-          DeviceParams.VerticalAlignmentType.CENTER) {
-          $scope.params.tray_to_lens_distance = 0.035
+        console.log(`[${new Date().toISOString()}] [Form Interface] Save triggered. screen_to_lens_distance:`, $scope.params.screen_to_lens_distance);
+        if (!$scope.ws || $scope.ws.readyState !== WebSocket.OPEN) {
+          console.warn(`[${new Date().toISOString()}] [Form Interface] Warning: WebSocket not open (state: ${$scope.ws ? $scope.ws.readyState : 'undefined'}). Save will be pending.`);
+          $scope.pendingSave = true;
+          return;
         }
-        // Magnet button implies has_magnet
-        if ($scope.params.primary_button === DeviceParams.ButtonType.MAGNET) {
-          $scope.params.has_magnet = true
-          $scope.has_magnet_field_enabled = false
-        } else {
-          $scope.has_magnet_field_enabled = true
-        }
-
-        $scope.data.update_timestamp = new Date().getTime()
-        $scope.data.params_uri = CARDBOARD.paramsToUri($scope.params)
-        $scope.ws.send(JSON.stringify({
-          params_uri: $scope.data.params_uri,
-          show_lens_center: true
-        }))
-        localStorage.setItem('data', JSON.stringify($scope.data))
-
-        distortionPlot(
-          $scope.params.distortion_coefficients[0],
-          $scope.params.distortion_coefficients[1])
+        $scope.data.update_timestamp = new Date().getTime();
+        $scope.data.params_uri = CARDBOARD.paramsToUri($scope.params);
+        $scope.ws.send(JSON.stringify({ params_uri: $scope.data.params_uri, show_lens_center: true }));
+        localStorage.setItem('data', JSON.stringify($scope.data));
+        distortionPlot($scope.params.distortion_coefficients[0], $scope.params.distortion_coefficients[1]);
       }
 
       // true if current settings have non-default "advanced" field values
@@ -576,75 +576,6 @@ $timeout(function() {
           }
         }
       }
-      // TODO: 把这里改成用websocket试试？
-      // firebase.auth().onAuthStateChanged(function (authData) {
-      //   if (!authData) {
-      //     firebase.auth().signInAnonymously().catch(function (error) {
-      //       if (error) {
-      //         console.log("Firebase login failed.", error)
-      //         $scope.alerts.push({
-      //           type: 'danger',
-      //           msg: 'Firebase login failed.'
-      //         })
-      //       }
-      //     })
-
-      //     return
-      //   }
-      //   // Note that onAuth will call given function immediately if user is
-      //   // already authenticated.  Use $timeout to ensure we consistently
-      //   // run within digest loop.
-      //   // TODO: use angularfire $onAuth
-      //   $timeout(function () {
-      //     if (authData) {
-      //       console.log("Logged in to Firebase via provider")
-
-      //       $scope.firebase_token = authData.uid
-      //       var firebase_user = firebase_root.child('users').child(authData.uid)
-      //       $scope.data = $firebaseObject(firebase_user)
-      //       // init form data on initial load
-      //       // TODO: listen for out-of-band changes to params_uri
-      //       $scope.data.$loaded().then(function (data) {
-      //         $scope.data.show_lens_center = true
-      //         if (!$scope.data.params_uri) {
-      //           $scope.reset()
-      //         } else {
-      //           $scope.set_params_uri()
-      //         }
-      //       })
-      //       // generate remote QR code
-      //       // Remote link href won't be available until next $digest cycle.
-      //       $timeout(function () {
-      //         var longUrl = document.getElementById('remote_link').href
-      //         getShortUrl(longUrl).then(function (shortUrl) {
-      //           $timeout(function () {
-      //             var qr = makeQr(2, 'L', shortUrl)
-      //             document.getElementById('remote_qrcode').innerHTML =
-      //               qr.createImgTag(QR_PIXELS_PER_CELL)
-      //             $scope.short_remote_link = shortUrl
-      //           })
-      //         })
-      //       })
-
-      //       // Manage auto-advance from welcome step once remote scene paired.
-      //       // Advance only allowed when starting from no active connections.
-      //       firebase_user.child('connections').on('value', function (connections) {
-      //         if (connections.val()) {
-      //           if ($scope.allow_auto_advance &&
-      //             $scope.wizard_step === $scope.steps.WELCOME) {
-      //             $scope.wizard_step = $scope.steps.WELCOME
-      //           }
-      //           $scope.allow_auto_advance = false
-      //         } else {
-      //           $scope.allow_auto_advance = true
-      //         }
-      //       })
-      //     } else {
-      //       console.log("Logged out of Firebase.")
-      //     }
-      //   })
-      // })
-    }])
 
   .config(function ($provide) {
     $provide.decorator("$exceptionHandler", ['$delegate', function ($delegate) {
@@ -735,3 +666,84 @@ $timeout(function() {
       }
     })
 
+  /* WebSocket Live Sync for Viewer Parameters (Form Interface) */
+(function(){
+  const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+  const socketUrl = protocol + window.location.host + '/ws';
+  const ws = new WebSocket(socketUrl);
+  
+  ws.onopen = function() {
+    console.debug(`[${new Date().toISOString()}] [Form Interface] Live Sync WebSocket connected at ${socketUrl}`);
+  };
+  
+  ws.onmessage = function(event) {
+    const receiveTime = Date.now();
+    console.debug(`[${new Date().toISOString()}] [Form Interface] Received raw message: ${event.data}`);
+    try {
+      const data = JSON.parse(event.data);
+      if(data.screen_to_lens_distance !== undefined){
+        cdp.screen_to_lens_distance = data.screen_to_lens_distance;
+        console.debug(`[${new Date().toISOString()}] [Form Interface] Updated screen_to_lens_distance: ${data.screen_to_lens_distance}`);
+        if(data.sentTime){
+          const latency = receiveTime - new Date(data.sentTime).getTime();
+          console.debug(`[${new Date().toISOString()}] [Form Interface] Latency for screen_to_lens_distance update: ${latency} ms`);
+        }
+      }
+      if(data.inter_lens_distance !== undefined){
+        cdp.inter_lens_distance = data.inter_lens_distance;
+        console.debug(`[${new Date().toISOString()}] [Form Interface] Updated inter_lens_distance: ${data.inter_lens_distance}`);
+        if(data.sentTime){
+          const latency = receiveTime - new Date(data.sentTime).getTime();
+          console.debug(`[${new Date().toISOString()}] [Form Interface] Latency for inter_lens_distance update: ${latency} ms`);
+        }
+      }
+    } catch(e) {
+      console.error(`[${new Date().toISOString()}] [Form Interface] Error parsing WebSocket message:`, e);
+    }
+  };
+  
+  function attachScreenInputListener() {
+    const screenInput = document.getElementById('form-screen_to_lens_distance');
+    if(screenInput){
+      screenInput.addEventListener('change', function(){
+        let value = parseFloat(screenInput.value);
+        const sentTime = new Date().toISOString();
+        console.debug(`[${new Date().toISOString()}] [Form Interface] screen_to_lens_distance changed to: ${value} (at ${sentTime})`);
+        ws.send(JSON.stringify({ screen_to_lens_distance: value, sentTime: sentTime }));
+        console.debug(`[${new Date().toISOString()}] [Form Interface] Sent screen_to_lens_distance update with sentTime: ${sentTime}`);
+      });
+      screenInput.addEventListener('input', function(){
+        let value = parseFloat(screenInput.value);
+        const sentTime = new Date().toISOString();
+        console.debug(`[${new Date().toISOString()}] [Form Interface] (Input Event) screen_to_lens_distance changed to: ${value} (at ${sentTime})`);
+        ws.send(JSON.stringify({ screen_to_lens_distance: value, sentTime: sentTime }));
+        console.debug(`[${new Date().toISOString()}] [Form Interface] (Input Event) Sent screen_to_lens_distance update with sentTime: ${sentTime}`);
+      });
+      console.debug(`[${new Date().toISOString()}] [Form Interface] Attached event listeners to form-screen_to_lens_distance.`);
+    } else {
+      console.warn(`[${new Date().toISOString()}] [Form Interface] form-screen_to_lens_distance not found. Retrying in 1 second.`);
+      setTimeout(attachScreenInputListener, 1000);
+    }
+  }
+  attachScreenInputListener();
+  
+  const interInput = document.getElementById('inter_lens_distance_input');
+  if(interInput){
+    interInput.addEventListener('change', function(){
+      let value = parseFloat(interInput.value);
+      const sentTime = new Date().toISOString();
+      console.debug(`[${new Date().toISOString()}] [Form Interface] inter_lens_distance changed to: ${value} (at ${sentTime})`);
+      ws.send(JSON.stringify({ inter_lens_distance: value, sentTime: sentTime }));
+      console.debug(`[${new Date().toISOString()}] [Form Interface] Sent inter_lens_distance update with sentTime: ${sentTime}`);
+    });
+  } else {
+    console.debug(`[${new Date().toISOString()}] [Form Interface] inter_lens_distance_input not found.`);
+  }
+  
+  ws.onerror = function(event) {
+    console.error(`[${new Date().toISOString()}] [Form Interface] Live Sync WebSocket error:`, event);
+  };
+  ws.onclose = function() {
+    console.debug(`[${new Date().toISOString()}] [Form Interface] Live Sync WebSocket disconnected.`);
+  };
+})();

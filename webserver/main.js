@@ -1,121 +1,106 @@
-import Koa from "koa";
-import Router from "@koa/router";
-import send from "koa-send";
-import websockify from "koa-websocket";
-import fs from "fs/promises";
-import fsSync from "fs";
-import path from "path";
-import { promisify } from "util";
-import { exec, execSync } from "child_process";
-import https from "https";
-import net from "net";
+import fs from 'fs';
+import path from 'path';
+import https from 'https';
+import Koa from 'koa';
+import send from 'koa-send';
+import koaWebsocket from 'koa-websocket';
+import { fileURLToPath } from 'url';
 
-const execPromise = promisify(exec);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Initialize app first
-const app = websockify(new Koa());
-const router = new Router();
-const wsRouter = new Router();
-const clients = [];
-
-// WebSocket route
-wsRouter.get("/datachannel", (ctx) => {
-  if (!ctx.websocket) {
-    ctx.body = { err: "need to connect this by ws" };
-    return;
-  }
-  const socket = ctx.websocket;
-  clients.push(socket);
-  socket.on("message", (message) => {
-    clients.forEach((s) => {
-      if (s.readyState === s.OPEN) {
-        s.send(message);
-      }
-    });
-  });
-});
-
-// API route
-router.get("/api/localip", async (ctx) => {
-  const ip = await getLocalIp();
-  ctx.set("Content-Type", "application/json");
-  ctx.body = { ip };
-});
-
-// Middleware for /datachannel
-app.use(async (ctx, next) => {
-  if (ctx.path === "/datachannel" && 
-     !(ctx.request.headers.upgrade?.toLowerCase() === "websocket")) {
-    console.log("[DEBUG] Blocking non-WebSocket request for /datachannel");
-    ctx.status = 404;
-    ctx.body = "";
-    return;
-  }
-  await next();
-});
-
-// Static file serving
-app.use(async (ctx, next) => {
-  try {
-    await send(ctx, ctx.path, {
-      root: path.join(process.cwd(), "www"),
-      index: "index.html"
-    });
-  } catch (err) {
-    await next();
-  }
-});
-
-// Fallback to index.html
-app.use(async (ctx) => {
-  try {
-    const content = await fs.readFile(path.join(process.cwd(), "www", "index.html"), "utf8");
-    ctx.set("content-type", "text/html");
-    ctx.body = content.replace(/localhost/g, await getLocalIp());
-  } catch (err) {
-    ctx.status = 404;
-    ctx.body = "Not Found";
-  }
-});
-
-// Helper functions
-async function getLocalIp() {
-  return new Promise((resolve) => {
-    const socket = net.createConnection(53, "8.8.8.8");
-    socket.on("connect", () => {
-      resolve(socket.address().address);
-      socket.end();
-    });
-    socket.on("error", () => resolve("localhost"));
-  });
+// Logging helper functions for consistent and enriched logging
+function logDebug(message, ...args) {
+  console.log(`[${new Date().toISOString()}] ${message}`, ...args);
+}
+function logError(message, ...args) {
+  console.error(`[${new Date().toISOString()}] ${message}`, ...args);
+}
+function logWarn(message, ...args) {
+  console.warn(`[${new Date().toISOString()}] ${message}`, ...args);
 }
 
-// Certificate handling
-async function setupServer() {
-  console.log("Ensuring certificates...");
+logDebug('Starting webserver...');
+
+let key, cert;
+try {
+  const certDir = path.join(__dirname, '../');
+  logDebug(`Reading certificate files from ${certDir}`);
+  key = fs.readFileSync(path.join(certDir, 'key.pem'));
+  cert = fs.readFileSync(path.join(certDir, 'cert.pem'));
+  logDebug('Successfully read certificate files.');
+} catch (err) {
+  logError(`Error reading certificate files from ${path.join(__dirname, '../')}. Please ensure that 'key.pem' and 'cert.pem' exist in the project root. Verify file existence and permissions.`, err);
+  process.exit(1);
+}
+
+const options = { key, cert };
+
+const port = process.env.PORT || 8000;
+
+const app = koaWebsocket(new Koa());
+
+app.use(async (ctx, next) => {
+  if (ctx.path.startsWith('/ws')) {
+    return await next();
+  }
+  // If the request is for legacy endpoints such as '/datachannel', return 404 quietly.
+  if (ctx.path === '/datachannel' || ctx.path === '/api/localip') {
+    logDebug(`Legacy endpoint "${ctx.path}" requested; returning 404 without error.`);
+    ctx.status = 404;
+    ctx.body = 'Not Found';
+    return;
+  }
   try {
-    execSync("mkcert -install");
-    execSync("mkcert -cert-file localhost.pem -key-file localhost-key.pem 192.168.31.18 localhost");
+    logDebug(`Serving static file: ${ctx.path} requested from ${ctx.ip || 'unknown IP'}`);
+    await send(ctx, ctx.path, { root: path.join(__dirname, '../www'), index: 'index.html' });
+    if (!ctx.body) {
+      logWarn(`File not found for path ${ctx.path}. Returning 404.`);
+      ctx.status = 404;
+      ctx.body = 'Not Found';
+    }
+  } catch (err) {
+    logError(`Error serving static file for path ${ctx.path}:`, err);
+    ctx.status = err.status || 404;
+    ctx.body = 'Not Found';
+  }
+});
+
+const wsClients = new Set();
+
+app.ws.use((ctx) => {
+  if (ctx.path === '/ws') {
+    const clientId = (ctx.websocket._socket.remoteAddress || 'unknown') + ':' + (ctx.websocket._socket.remotePort || '');
+    wsClients.add(ctx.websocket);
+    logDebug(`New WebSocket client connected (ID: ${clientId}). Total clients: ${wsClients.size}`);
     
-    execSync("openssl x509 -in localhost.pem -inform PEM -outform DER -out localhost.crt", { stdio: "inherit" });
-    console.log("Converted PEM to DER format: localhost.crt generated.");
-
-    const credentials = {
-      cert: await fs.readFile("localhost.pem", "utf8"),
-      key: await fs.readFile("localhost-key.pem", "utf8")
-    };
-
-    https.createServer(credentials, app.callback())
-      .listen(8000, "0.0.0.0", () => {
-        console.log("Server running on https://localhost:8000");
+    ctx.websocket.on('message', (message) => {
+      logDebug(`Received WebSocket message from client ${clientId}: ${message}`);
+      try {
+        const parsed = JSON.parse(message);
+        logDebug(`Parsed message content from client ${clientId}:`, parsed);
+      } catch (e) {
+        logWarn(`Received invalid JSON message from client ${clientId}. Raw message: ${message}`);
+      }
+      wsClients.forEach(client => {
+        if (client !== ctx.websocket && client.readyState === 1) { // OPEN state
+          client.send(message);
+          logDebug(`Forwarded message from client ${clientId} to another client. Total clients: ${wsClients.size}`);
+        }
       });
-  } catch (error) {
-    console.error("Certificate error:", error);
-    process.exit(1);
+    });
+    
+    ctx.websocket.on('close', () => {
+      wsClients.delete(ctx.websocket);
+      logDebug(`WebSocket client disconnected (ID: ${clientId}). Total clients: ${wsClients.size}`);
+    });
+    
+    ctx.websocket.on('error', (error) => {
+      logError(`WebSocket client error (ID: ${clientId}):`, error);
+    });
   }
-}
+});
 
-// Apply routes and start
-app.use(router.routes());
-app.ws.use(wsRouter.routes());
-setupServer();
+https.createServer(options, app.callback()).listen(port, () => {
+  logDebug(`HTTPS server listening on port ${port}`);
+});
