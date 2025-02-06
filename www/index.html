@@ -33,11 +33,12 @@
   <!-- Ensure the missing global variable "locallp" is defined -->
   <script>
     try {
-      console.log("[DEBUG] Before setting locallp:", window.locallp);
-      if (!window.locallp) {
-        window.locallp = window.location.hostname;
+      locallp = window.locallp || window.location.hostname;
+      window.locallp = locallp;
+      console.log("[DEBUG] locallp set to:", locallp);
+      if (location.protocol !== 'https:') {
+        console.warn("Connection is not secure. For VR head tracking, please use a secure HTTPS connection and install the mkcert root CA on your mobile device.");
       }
-      console.log("[DEBUG] After setting locallp:", window.locallp);
     } catch (e) {
       console.error("[DEBUG] Error setting locallp:", e);
     }
@@ -62,6 +63,8 @@
   <script src="js/third-party/ProtoBuf.min.js"></script>
   <script src="js/third-party/qrcode.js"></script>
   <script src="js/config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.0/qrcode.min.js"></script>
+
   <script src="js/Cardboard.js"></script>
   <script src="js/app.js"></script>
 </head>
@@ -163,13 +166,14 @@
               <div class="col-md-4 step-two">
                 <span class="num">2</span>
                 <p>Use your phone and open the URL or scan the QR code&nbsp;below.</p>
-                <a ng-href="3d.html" id="remote_link">http://localhost:8000/3d.html</a>
-                <p>&nbsp;</p>
-                <a ng-href="{{short_remote_link}}">{{short_remote_link}}</a>
-                <p>&nbsp;</p>
-                <p>or</p>
-                <p>&nbsp;</p>
-                <div id="remote_qrcode"></div>
+                <div class="row">
+                  <div class="col-xs-12 text-center">
+                    <a ng-href="{{short_remote_link}}" id="remote_link" style="display:block; margin-bottom:10px;">{{short_remote_link}}</a>
+                  </div>
+                  <div class="col-xs-12 text-center">
+                    <div id="remote_qrcode"></div>
+                  </div>
+                </div>
               </div>
               <hr class="show-md" />
               <div class="col-md-4 step-three">

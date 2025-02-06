@@ -334,62 +334,58 @@ angular
   .controller('myController', ['$scope', '$http', '$timeout', '$q', '$window', '$mdDialog',
     function ($scope, $http, $timeout, $q, $window, $mdDialog) {
       $http.get('/api/localip').then(function(response) {
-        let localIp = response.data.ip;
-        let newUrl = "http://" + localIp + ":8000/3d.html";
+        let newUrl = "https://192.168.31.18:8000/3d.html";
         var link = document.getElementById("remote_link");
         if (link) {
           link.href = newUrl;
         }
         $scope.short_remote_link = newUrl;
+        $timeout(updateParamQr, 0);
+      }, function(error) {
+        let newUrl = "https://192.168.31.18:8000/3d.html";
+        var link = document.getElementById("remote_link");
+        if (link) {
+          link.href = newUrl;
+        }
+        $scope.short_remote_link = newUrl;
+        $timeout(updateParamQr, 0);
       });
       // Returns promise for shortUrl string.
       var getShortUrl = function (longUrl) {
         // 动态连接要关了，就不用短网址了
         return new Promise(function (resolve, reject) {
+$timeout(function() {
+  $scope.short_remote_link = "https://192.168.31.18:8000/3d.html";
+  updateParamQr();
+}, 0);
+
           resolve(longUrl)
         })
       }
 
       var updateParamQr = function () {
-        var qr_div = document.getElementById('params_qrcode')
-        qr_div.innerHTML = "Generating QR code..."
-        const url_sans_scheme = $scope.data.params_uri.replace('http://', '')
-        const qr = makeQr(5, 'L', url_sans_scheme, PARAM_QR_CUSTOM_PADDING)
-        qr_div.innerHTML = qr.createImgTag(QR_PIXELS_PER_CELL)
-        // TODO: figure out why img not complete w/o extra cycles on Firefox
-        $timeout(function () {
-          rotateImg(qr_div.firstChild, -Math.PI / 2)
-          $timeout(function () {
-            var svg = svgFromImage(qr_div.firstChild, QR_PIXELS_PER_CELL)
-            $scope.svg_params_qr_uri = 'data:image/svg+xml;base64,' +
-              btoa((new XMLSerializer()).serializeToString(svg))
-            $scope.png_params_qr_uri = qr_div.firstChild.src
-          })
-        })
+        var qr_div = document.getElementById('remote_qrcode');
+        var url = $scope.short_remote_link;
+        qr_div.innerHTML = "Generating QR code...";
+        QRCode.toDataURL(url, { width: 400, margin: 8, errorCorrectionLevel: 'H' }, function (err, dataUrl) {
+            if (err) {
+                qr_div.innerHTML = "Error generating QR code.";
+            } else {
+                var img = document.createElement('img');
+                img.src = dataUrl;
+                qr_div.innerHTML = "";
+                qr_div.appendChild(img);
+            }
+        });
       }
 
       $scope.alert = ''
-         // Establish WebSocket connection for live sync:
-         var ws = new WebSocket("wss://" + localIp + ":8000/datachannel");
-         ws.onopen = function() {
-           console.log("WebSocket connection established.");
-         };
-         ws.onmessage = function(event) {
-           try {
-             var data = JSON.parse(event.data);
-             if (data.type === "updateParams") {
-               console.log("Received parameter update:", data.params);
-               // Optionally, call updateViewerParameters(data.params) to update the VR scene
-             }
-           } catch (err) {
-             console.error("Error parsing WebSocket message:", err);
-           }
-         };
          
          // Watch for changes in parameters and notify the VR scene
          $scope.$watch('params', function(newVal, oldVal) {
-           if (newVal !== oldVal && ws.readyState === WebSocket.OPEN) {
-             ws.send(JSON.stringify({ type: "updateParams", params: newVal }));
+           if (newVal !== oldVal && $scope.ws.readyState === WebSocket.OPEN) {
+             let uri = CARDBOARD.paramsToUri(newVal);
+             $scope.ws.send(JSON.stringify({ params_uri: uri, show_lens_center: true }));
            }
          }, true);
 
@@ -483,7 +479,7 @@ angular
         "has_magnet": false,
         "primary_button": DeviceParams.ButtonType.NONE,
       }
-      $scope.ws = new WebSocket('/datachannel')
+      $scope.ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/datachannel")
       $scope.save = function () {
         // Ensure tray_to_lens_distance has nominal value for best-effort
         // support of apps using older revsion of params proto.

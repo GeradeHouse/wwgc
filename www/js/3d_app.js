@@ -191,11 +191,31 @@ function init_with_cardboard_device(ws, cardboard_device) {
   //       CAMERA_NEAR, CAMERA_FAR, val.show_lens_center)
   //   })
   ws.addEventListener('message', (event) => {
-    const val = JSON.parse(event.data)
-    cardboard_view.device = CARDBOARD.uriToParams(val.params_uri)
+    const val = JSON.parse(event.data);
+    console.log("[DEBUG] Received parameter update via WebSocket:", val);
+    // Update the cardboard device parameters.
+    cardboard_view.device = CARDBOARD.uriToParams(val.params_uri);
     CARDBOARD.updateBarrelDistortion(barrel_distortion, cardboard_view,
-      CAMERA_NEAR, CAMERA_FAR, val.show_lens_center)
-  })
+      CAMERA_NEAR, CAMERA_FAR, val.show_lens_center);
+    // Remove the existing stereo effect pass if it exists.
+    if (composer.passes.length > 0) {
+      composer.removePass(composer.passes[0]);
+    }
+    // Create a new CardboardStereoEffect pass with updated parameters.
+    const stereoEffect = new THREE.CardboardStereoEffect(cardboard_view, scene, camera);
+    composer.addPass(stereoEffect);
+    // Reset the composer buffers.
+    composer.reset();
+    // Update the camera projection matrix.
+    camera.updateProjectionMatrix();
+    // If available, call the update method on the cardboard view.
+    if (typeof cardboard_view.update === 'function') {
+      cardboard_view.update();
+    }
+    // Force an immediate render.
+    composer.render();
+    console.log("[DEBUG] VR scene updated with new parameters.");
+  });
   window.addEventListener('resize', resize, false)
   window.setTimeout(resize, 1)
 

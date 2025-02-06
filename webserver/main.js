@@ -12,29 +12,13 @@ import net from "net";
 
 const execPromise = promisify(exec);
 
+// Initialize app first
 const app = websockify(new Koa());
 const router = new Router();
 const wsRouter = new Router();
-
 const clients = [];
 
-async function getLocalIp() {
-  try {
-    return new Promise((resolve) => {
-      const socket = net.createConnection(53, "8.8.8.8", function () {
-        const addr = socket.address();
-        resolve(addr.address);
-        socket.end();
-      });
-      socket.on("error", () => {
-        resolve("localhost");
-      });
-    });
-  } catch {
-    return "localhost";
-  }
-}
-
+// WebSocket route
 wsRouter.get("/datachannel", (ctx) => {
   if (!ctx.websocket) {
     ctx.body = { err: "need to connect this by ws" };
@@ -51,134 +35,87 @@ wsRouter.get("/datachannel", (ctx) => {
   });
 });
 
+// API route
 router.get("/api/localip", async (ctx) => {
   const ip = await getLocalIp();
   ctx.set("Content-Type", "application/json");
   ctx.body = { ip };
 });
 
-app.use(router.routes());
-app.use(router.allowedMethods());
-
-// Static file serving middleware with logging.
+// Middleware for /datachannel
 app.use(async (ctx, next) => {
-  console.log("Incoming request:", ctx.path);
-  // If the requested path is "/" or "/index.html" (or empty), serve index.html directly.
-  if (!ctx.path || ctx.path === "/" || ctx.path === "/index.html") {
-    console.log("[DEBUG] Serving index.html for:", ctx.path);
-    const filePath = path.join(process.cwd(), "www", "index.html");
-    console.log("Attempting to serve index from:", filePath);
-    try {
-      let content = await fs.readFile(filePath, "utf8");
-      const localIp = await getLocalIp();
-      console.log("[DEBUG] Replacing 'localhost' with:", localIp);
-      content = content.replace(/localhost/g, localIp);
-      console.log("[DEBUG] Content length:", content.length);
-      ctx.set("content-type", "text/html");
-      ctx.body = content;
-      console.log("Successfully served index.html for", ctx.path);
-      return;
-    } catch (err) {
-      console.error("Error reading index.html at", filePath, err);
-      ctx.status = 500;
-      ctx.body = "Internal Server Error";
-      return;
-    }
-  } else {
-    try {
-      await send(ctx, ctx.path, {
-        root: path.join(process.cwd(), "www"),
-        index: "index.html",
-      });
-    } catch (err) {
-      console.error("Error sending file for", ctx.path, err);
-      await next();
-    }
+  if (ctx.path === "/datachannel" && 
+     !(ctx.request.headers.upgrade?.toLowerCase() === "websocket")) {
+    console.log("[DEBUG] Blocking non-WebSocket request for /datachannel");
+    ctx.status = 404;
+    ctx.body = "";
+    return;
+  }
+  await next();
+});
+
+// Static file serving
+app.use(async (ctx, next) => {
+  try {
+    await send(ctx, ctx.path, {
+      root: path.join(process.cwd(), "www"),
+      index: "index.html"
+    });
+  } catch (err) {
+    await next();
   }
 });
 
-// Fallback middleware: Always serve index.html.
-// This ensures routes not matching a static asset will load the SPA.
+// Fallback to index.html
 app.use(async (ctx) => {
-  const filePath = path.join(process.cwd(), "www", "index.html");
-  console.log("Default fallback: serving index.html for", ctx.path);
   try {
-    let fallbackContent = await fs.readFile(filePath, "utf8");
-    const localIp = await getLocalIp();
-    fallbackContent = fallbackContent.replace(/localhost/g, localIp);
+    const content = await fs.readFile(path.join(process.cwd(), "www", "index.html"), "utf8");
     ctx.set("content-type", "text/html");
-    ctx.body = fallbackContent;
+    ctx.body = content.replace(/localhost/g, await getLocalIp());
   } catch (err) {
-    console.error("Fallback error reading index.html at", filePath, err);
     ctx.status = 404;
     ctx.body = "Not Found";
   }
 });
 
-// Simplified HTTPS Certificate Handling with mkcert check and auto-generation.
-console.log("Ensuring mkcert is installed and initialized...");
-
-async function ensureMkcertInstalled() {
-  try {
-    execSync("mkcert -version", { stdio: "ignore" });
-    console.log("mkcert is already installed.");
-  } catch (e) {
-    console.log("mkcert is not installed. Installing mkcert via Chocolatey...");
-    try {
-      execSync("choco install mkcert -y", { stdio: "inherit" });
-      console.log("mkcert installed successfully.");
-    } catch (installError) {
-      console.error("Failed to install mkcert", installError);
-      throw installError;
-    }
-    try {
-      execSync("mkcert -install", { stdio: "inherit" });
-      console.log("mkcert has been initialized successfully.");
-    } catch (initError) {
-      console.error("Failed to initialize mkcert", initError);
-      throw initError;
-    }
-  }
-}
-
-await ensureMkcertInstalled();
-
-console.log("Ensuring certificate files exist...");
-
-const certPath = path.join(process.cwd(), "localhost.pem");
-const keyPath = path.join(process.cwd(), "localhost-key.pem");
-
-async function ensureCertificates() {
-  if (!fsSync.existsSync(certPath) || !fsSync.existsSync(keyPath)) {
-    console.log("Certificates not found. Generating via mkcert...");
-    try {
-      execSync("mkcert localhost", { stdio: "inherit" });
-      console.log("Certificates generated successfully.");
-    } catch (error) {
-      console.error("Error generating certificates via mkcert", error);
-      throw error;
-    }
-  }
-  try {
-    const certContent = await fs.readFile(certPath, "utf8");
-    const keyContent = await fs.readFile(keyPath, "utf8");
-    return { cert: certContent, key: keyContent };
-  } catch (error) {
-    console.error("Error reading certificate files", error);
-    throw error;
-  }
-}
-
-try {
-  const credentials = await ensureCertificates();
-  console.log("Starting secured HTTPS server on port 8000.");
-  const httpsServer = https.createServer(credentials, app.callback());
-  httpsServer.listen(8000, "0.0.0.0", () => {
-    console.log("Server is listening on https://localhost:8000");
+// Helper functions
+async function getLocalIp() {
+  return new Promise((resolve) => {
+    const socket = net.createConnection(53, "8.8.8.8");
+    socket.on("connect", () => {
+      resolve(socket.address().address);
+      socket.end();
+    });
+    socket.on("error", () => resolve("localhost"));
   });
-} catch (error) {
-  console.error("Unable to start HTTPS server due to certificate issues:", error);
 }
 
+// Certificate handling
+async function setupServer() {
+  console.log("Ensuring certificates...");
+  try {
+    execSync("mkcert -install");
+    execSync("mkcert -cert-file localhost.pem -key-file localhost-key.pem 192.168.31.18 localhost");
+    
+    execSync("openssl x509 -in localhost.pem -inform PEM -outform DER -out localhost.crt", { stdio: "inherit" });
+    console.log("Converted PEM to DER format: localhost.crt generated.");
+
+    const credentials = {
+      cert: await fs.readFile("localhost.pem", "utf8"),
+      key: await fs.readFile("localhost-key.pem", "utf8")
+    };
+
+    https.createServer(credentials, app.callback())
+      .listen(8000, "0.0.0.0", () => {
+        console.log("Server running on https://localhost:8000");
+      });
+  } catch (error) {
+    console.error("Certificate error:", error);
+    process.exit(1);
+  }
+}
+
+// Apply routes and start
+app.use(router.routes());
 app.ws.use(wsRouter.routes());
-app.ws.use(wsRouter.allowedMethods());
+setupServer();
