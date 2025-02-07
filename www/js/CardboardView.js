@@ -21,6 +21,8 @@
  * @description Core namespace for Cardboard viewer functionality
  */
 
+/*globals document, window, CARDBOARD, WURFL, THREE*/
+
 /**
  * Creates a new CardboardView instance for handling VR display parameters
  * @class

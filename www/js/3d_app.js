@@ -15,6 +15,11 @@
  */
 
 'use strict'
+/**
+ * @fileoverview Main 3D application module for the WWGC Configurator
+ * Implements the core 3D rendering and interaction functionality
+ * @module 3d_app
+ */
 
 /*global alert, document, screen, window, init,
   THREE, WURFL, screenfull, CARDBOARD, CONFIG, ga*/
@@ -110,8 +115,10 @@ function setOrientationControls(e) {
 
 
 /**
- * @param ws {WebSocket}
-*/
+ * Initializes the 3D scene with Cardboard device parameters
+ * @param {WebSocket} ws - WebSocket connection for live updates
+ * @param {Object} cardboard_device - Cardboard device parameters
+ */
 function init_with_cardboard_device(ws, cardboard_device) {
   renderer = new THREE.WebGLRenderer()
   element = renderer.domElement
@@ -232,6 +239,10 @@ function init_with_cardboard_device(ws, cardboard_device) {
   animate()
 }
 
+/**
+ * Checks for WebGL support in the current browser
+ * @returns {boolean} True if WebGL is supported, false otherwise
+ */
 function hasWebGl() {
   var canvas = document.createElement("canvas")
   try {
@@ -242,6 +253,10 @@ function hasWebGl() {
   }
 }
 
+/**
+ * Initializes the 3D application
+ * Sets up WebSocket connection and initializes the scene
+ */
 function init() {
   if (!hasWebGl()) {
     console.log('WebGL not available')
