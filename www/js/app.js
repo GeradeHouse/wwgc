@@ -135,8 +135,7 @@ function distortionPlot(k1, k2) {
   const axes = {
     x0: 0.5 + 0.5 * canvas.height,  // x0 pixels from left to x=0
     y0: 0.5 + 0.8 * canvas.width,   // y0 pixels from top to y=0
-    // TODO: correct x range
-    xscale: canvas.height / 2,    // num. pixels from x=0 to x=1
+    xscale: canvas.height / 2,
     yscale: canvas.width / 2,
     doNegativeX: true,
   }
@@ -149,7 +148,6 @@ function distortionPlot(k1, k2) {
 
 function makeQr(minType, correctionLevel, text, customPadding) {
   let type = minType
-  // TODO: something more efficient than trial & error
   while (true) {
     try {
       let qr = qrcode(type, correctionLevel, customPadding)
@@ -202,16 +200,10 @@ function svgFromImage(img, imgScale) {
 }
 
 function areArraysEqual(arr1, arr2) {
-  if (arr1 === arr2) {
-    return true
-  }
-  if (arr1 === null || arr2 === null || arr1.length !== arr2.length) {
-    return false
-  }
+  if (arr1 === arr2) return true
+  if (arr1 === null || arr2 === null || arr1.length !== arr2.length) return false
   for (let i = 0; i < arr1.length; ++i) {
-    if (arr1[i] !== arr2[i]) {
-      return false
-    }
+    if (arr1[i] !== arr2[i]) return false
   }
   return true
 }
@@ -220,7 +212,6 @@ function initGapi() {
   if (window.initGapi2) {
     window.initGapi2()
   } else {
-    // wait for angular controller init
     window.setTimeout(initGapi, 500)
   }
 }
@@ -283,34 +274,23 @@ angular
     var animation = {
       enter: function (element, done) {
         var animator = $animateCss(element, {
-          from: {
-            maxHeight: '0vh'
-          },
-          to: {
-            maxHeight: '100vh'
-          },
+          from: { maxHeight: '0vh' },
+          to: { maxHeight: '100vh' },
           duration: 0.75
         })
         animator.start().finally(done)
       },
       leave: function (element, done) {
         var animator = $animateCss(element, {
-          from: {
-            maxHeight: '100vh'
-          },
-          to: {
-            maxHeight: '0vh'
-          },
+          from: { maxHeight: '100vh' },
+          to: { maxHeight: '0vh' },
           duration: 0.3
         })
         animator.start().finally(done)
       },
-      move: function (element, done) {
-      },
-      addClass: function (element, className, done) {
-      },
-      removeClass: function (element, className, done) {
-      }
+      move: function (element, done) {},
+      addClass: function (element, className, done) {},
+      removeClass: function (element, className, done) {}
     }
     return animation
   })
@@ -336,29 +316,23 @@ angular
       $http.get('/api/localip').then(function(response) {
         let newUrl = "https://192.168.31.18:8000/3d.html";
         var link = document.getElementById("remote_link");
-        if (link) {
-          link.href = newUrl;
-        }
+        if (link) link.href = newUrl;
         $scope.short_remote_link = newUrl;
         $timeout(updateParamQr, 0);
       }, function(error) {
         let newUrl = "https://192.168.31.18:8000/3d.html";
         var link = document.getElementById("remote_link");
-        if (link) {
-          link.href = newUrl;
-        }
+        if (link) link.href = newUrl;
         $scope.short_remote_link = newUrl;
         $timeout(updateParamQr, 0);
       });
-      // Returns promise for shortUrl string.
-      var getShortUrl = function (longUrl) {
-        // 动态连接要关了，就不用短网址了
-        return new Promise(function (resolve, reject) {
-$timeout(function() {
-  $scope.short_remote_link = "https://192.168.31.18:8000/3d.html";
-  updateParamQr();
-}, 0);
 
+      var getShortUrl = function (longUrl) {
+        return new Promise(function (resolve, reject) {
+          $timeout(function() {
+            $scope.short_remote_link = "https://192.168.31.18:8000/3d.html";
+            updateParamQr();
+          }, 0);
           resolve(longUrl)
         })
       }
@@ -368,14 +342,14 @@ $timeout(function() {
         var url = $scope.short_remote_link;
         qr_div.innerHTML = "Generating QR code...";
         QRCode.toDataURL(url, { width: 400, margin: 8, errorCorrectionLevel: 'H' }, function (err, dataUrl) {
-            if (err) {
-                qr_div.innerHTML = "Error generating QR code.";
-            } else {
-                var img = document.createElement('img');
-                img.src = dataUrl;
-                qr_div.innerHTML = "";
-                qr_div.appendChild(img);
-            }
+          if (err) {
+            qr_div.innerHTML = "Error generating QR code.";
+          } else {
+            var img = document.createElement('img');
+            img.src = dataUrl;
+            qr_div.innerHTML = "";
+            qr_div.appendChild(img);
+          }
         });
       }
 
@@ -383,9 +357,9 @@ $timeout(function() {
          
          // Watch for changes in parameters and notify the VR scene
          $scope.$watch('params', function(newVal, oldVal) {
-           if (newVal !== oldVal && $scope.ws.readyState === WebSocket.OPEN) {
+           if (newVal !== oldVal && $scope.ws && $scope.ws.connected) {
              let uri = CARDBOARD.paramsToUri(newVal);
-             $scope.ws.send(JSON.stringify({ params_uri: uri, show_lens_center: true }));
+             $scope.ws.emit("message", { params_uri: uri, show_lens_center: true });
            }
          }, true);
 
@@ -408,8 +382,6 @@ $timeout(function() {
             HELPER_PARAMETER_MODAL[$scope.focus].content +
             '</md-dialog-content>' +
             '</md-dialog>',
-        }).then(function (answer) {
-        }, function () {
         })
       }
 
@@ -417,9 +389,7 @@ $timeout(function() {
 
       $scope.steps = { WELCOME: 0, OUTPUT: 1 }
       $scope.wizard_step = $scope.steps.WELCOME
-
       $scope.helper_sections = HELPER_PARAMETER_MODAL
-
       $scope.vertical_alignment_type = DeviceParams.VerticalAlignmentType
       $scope.vertical_alignment_type_options = [{
         id: DeviceParams.VerticalAlignmentType.BOTTOM,
@@ -456,14 +426,13 @@ $timeout(function() {
 
       $scope.alerts = []
       $scope.focus = null
-
       $scope.isAdvancedExpanded = false
-
       $scope.is_mobile = false
 
       $scope.closeAlert = function (index) {
         $scope.alerts.splice(index, 1)
       }
+      
       $scope.data = {}
       $scope.params = {
         "vendor": "",
@@ -477,68 +446,86 @@ $timeout(function() {
         "has_magnet": false,
         "primary_button": DeviceParams.ButtonType.NONE,
       }
-      // Initialize WebSocket connection with automatic reconnection
-      function connectWebSocket() {
-        $scope.ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/ws");
-        $scope.ws.onopen = function() {
-          console.log(`[${new Date().toISOString()}] [Form Interface] WebSocket connected.`);
+      // Initialize socket.io connection with automatic reconnection
+      function connectSocketIO() {
+        console.debug("Connecting to socket.io...");
+        const socket = io(window.location.origin, { transports: ["websocket"] });
+        socket.on("connect", function() {
+          console.log(`[${new Date().toISOString()}] socket.io connected: ${socket.id}`);
           if ($scope.pendingSave) {
             $scope.pendingSave = false;
             $scope.save();
           }
-        };
-        $scope.ws.onerror = function(e) {
-          console.error(`[${new Date().toISOString()}] [Form Interface] WebSocket error:`, e);
-        };
-        $scope.ws.onclose = function() {
-          console.warn(`[${new Date().toISOString()}] [Form Interface] WebSocket closed. Reconnecting...`);
-          setTimeout(connectWebSocket, 1000);
-        };
+        });
+        socket.on("message", function(data) {
+          const receiveTime = Date.now();
+          console.debug(`[${new Date().toISOString()}] Received message via socket.io:`, data);
+          try {
+            if(data.screen_to_lens_distance !== undefined) {
+              $scope.params.screen_to_lens_distance = data.screen_to_lens_distance;
+              console.debug(`[${new Date().toISOString()}] Updated screen_to_lens_distance: ${data.screen_to_lens_distance}`);
+              if(data.sentTime) {
+                const latency = receiveTime - new Date(data.sentTime).getTime();
+                console.debug(`[${new Date().toISOString()}] Latency for screen_to_lens_distance update: ${latency} ms`);
+              }
+            }
+            if(data.inter_lens_distance !== undefined) {
+              $scope.params.inter_lens_distance = data.inter_lens_distance;
+              console.debug(`[${new Date().toISOString()}] Updated inter_lens_distance: ${data.inter_lens_distance}`);
+              if(data.sentTime) {
+                const latency = receiveTime - new Date(data.sentTime).getTime();
+                console.debug(`[${new Date().toISOString()}] Latency for inter_lens_distance update: ${latency} ms`);
+              }
+            }
+          } catch(e) {
+            console.error(`[${new Date().toISOString()}] Error processing socket.io message:`, e);
+          }
+        });
+        socket.on("disconnect", function() {
+          console.warn(`[${new Date().toISOString()}] socket.io disconnected. Reconnecting...`);
+          setTimeout(connectSocketIO, 2000);
+        });
+        socket.on("connect_error", function(error) {
+          console.error(`[${new Date().toISOString()}] socket.io connection error:`, error);
+        });
+        $scope.ws = socket;
       }
-      connectWebSocket();
+      connectSocketIO();
+      
       $scope.save = function () {
-        console.log(`[${new Date().toISOString()}] [Form Interface] Save triggered. screen_to_lens_distance:`, $scope.params.screen_to_lens_distance);
-        if (!$scope.ws || $scope.ws.readyState !== WebSocket.OPEN) {
-          console.warn(`[${new Date().toISOString()}] [Form Interface] Warning: WebSocket not open (state: ${$scope.ws ? $scope.ws.readyState : 'undefined'}). Save will be pending.`);
+        console.log(`[${new Date().toISOString()}] Save triggered.`);
+        if (!$scope.ws || !$scope.ws.connected) {
+          console.warn(`[${new Date().toISOString()}] socket.io not connected. Save pending.`);
           $scope.pendingSave = true;
           return;
         }
         $scope.data.update_timestamp = new Date().getTime();
         $scope.data.params_uri = CARDBOARD.paramsToUri($scope.params);
-        $scope.ws.send(JSON.stringify({ params_uri: $scope.data.params_uri, show_lens_center: true }));
+        $scope.ws.emit("message", { params_uri: $scope.data.params_uri, show_lens_center: true });
         localStorage.setItem('data', JSON.stringify($scope.data));
         distortionPlot($scope.params.distortion_coefficients[0], $scope.params.distortion_coefficients[1]);
       }
 
-      // true if current settings have non-default "advanced" field values
       var hasAdvancedSettings = function () {
-        return ($scope.params !== undefined)
-          && (!areArraysEqual($scope.params.left_eye_field_of_view_angles, [50, 50, 50, 50])
-            || ($scope.params.has_magnet === true
-              && $scope.params.primary_button !== DeviceParams.ButtonType.MAGNET))
+        return ($scope.params !== undefined) &&
+          (!areArraysEqual($scope.params.left_eye_field_of_view_angles, [50, 50, 50, 50]) ||
+          ($scope.params.has_magnet === true && $scope.params.primary_button !== DeviceParams.ButtonType.MAGNET))
       }
 
       $scope.$watch('wizard_step', function (value) {
-        var virtual_page
         switch (value) {
           case $scope.steps.OUTPUT:
-            // Let user know when modifications to advanced fields are hidden.
-            if (hasAdvancedSettings() && !$scope.isAdvancedExpanded
-              && !confirm("It looks like you changed some of the advanced fields, but they're currently hidden. \n\nDo you want to generate your profile?")) {
+            if (hasAdvancedSettings() && !$scope.isAdvancedExpanded &&
+              !confirm("You have unsaved advanced settings. Generate profile anyway?")) {
               $scope.wizard_step = $scope.steps.WELCOME
               return
             }
-            // Generate the QR.  We do this lazily since it employs the URL
-            // shortener service.
             updateParamQr()
-            virtual_page = window.location.pathname + 'qr_output'
             break
           case $scope.steps.WELCOME:
-            virtual_page = window.location.pathname + 'form'
             break
         }
         $scope.isAdvancedExpanded = hasAdvancedSettings()
-
       })
 
       $scope.reset = function () {
@@ -554,16 +541,12 @@ $timeout(function() {
           "has_magnet": false,
           "primary_button": DeviceParams.ButtonType.NONE,
         }
-
         $scope.isAdvancedExpanded = false
         $scope.save()
       }
 
-      $scope.saveOrLoadParameters = {
-        open: false
-      }
+      $scope.saveOrLoadParameters = { open: false }
 
-      // Called when user changes params URI input field.
       $scope.set_params_uri = function () {
         if ($scope.data.params_uri === '') {
           $scope.save()
@@ -576,18 +559,18 @@ $timeout(function() {
           }
         }
       }
+    }])  // Fixed missing controller closure
 
   .config(function ($provide) {
     $provide.decorator("$exceptionHandler", ['$delegate', function ($delegate) {
       return function (exception, cause) {
         $delegate(exception, cause)
-        alert("An error has occurred.\n\n" + exception.message)
+        alert("Error: " + exception.message)
       }
     }])
   })
 
   .config(['$compileProvider', function ($compileProvider) {
-    // allow data:image, for our image download links
     $compileProvider.aHrefSanitizationWhitelist(
       /^\s*((https?|ftp|mailto|tel|file):|data:image\/)/)
   }])
@@ -598,152 +581,46 @@ $timeout(function() {
     }
   }])
 
-  // Validation for zero distortion coefficients
-  .directive('ngNonZero',
-    function () {
-      return {
-        restrict: 'A',
-        require: 'ngModel',
-        link: function ($scope, $elem, $attrs, ngModel) {
-          $scope.$watch($attrs.ngModel, function (value) {
-            var isValid = (value !== 0)
-            ngModel.$setValidity($attrs.ngModel, isValid)
-          })
-        }
+  .directive('ngNonZero', function () {
+    return {
+      restrict: 'A',
+      require: 'ngModel',
+      link: function ($scope, $elem, $attrs, ngModel) {
+        $scope.$watch($attrs.ngModel, function (value) {
+          ngModel.$setValidity($attrs.ngModel, (value !== 0))
+        })
       }
-    })
-
-  // Scale model-to-view by given factor and vice versa.
-  .directive('myScale',
-    function () {
-      return {
-        restrict: 'A',
-        require: 'ngModel',
-        link: function (scope, elem, attrs, ngModel) {
-          var scale = parseInt(attrs.myScale, 10)
-          // model-to-view
-          ngModel.$formatters.push(
-            function (val) {
-              if (val) {
-                return val * scale
-              }
-            })
-          // view-to-model
-          ngModel.$parsers.push(
-            function (val) {
-              var parsed = parseFloat(val)
-              if (isNaN(parsed)) {
-                return null
-              }
-              return parsed / scale
-            })
-        }
-      }
-    })
-
-  // Round view of numeric value to given fractional digits.
-  .directive('roundView',
-    function () {
-      return {
-        restrict: 'A',
-        require: 'ngModel',
-        link: function (scope, elem, attrs, ngModel) {
-          var fraction_digits = parseInt(attrs.roundView, 10)
-          // model-to-view
-          // Can't use a formatter here since we want full fixed point display
-          // (e.g. 0 rendered as "0.00").
-          ngModel.$render = function () {
-            if (ngModel.$isEmpty(ngModel.$viewValue)) {
-              elem.val('')
-            } else {
-              elem.val(Number(ngModel.$viewValue).toFixed(fraction_digits))
-            }
-          }
-          ngModel.$viewChangeListeners.push(function () {
-            ngModel.$render()
-          })
-        }
-      }
-    })
-
-  /* WebSocket Live Sync for Viewer Parameters (Form Interface) */
-(function(){
-  const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-  const socketUrl = protocol + window.location.host + '/ws';
-  const ws = new WebSocket(socketUrl);
-  
-  ws.onopen = function() {
-    console.debug(`[${new Date().toISOString()}] [Form Interface] Live Sync WebSocket connected at ${socketUrl}`);
-  };
-  
-  ws.onmessage = function(event) {
-    const receiveTime = Date.now();
-    console.debug(`[${new Date().toISOString()}] [Form Interface] Received raw message: ${event.data}`);
-    try {
-      const data = JSON.parse(event.data);
-      if(data.screen_to_lens_distance !== undefined){
-        cdp.screen_to_lens_distance = data.screen_to_lens_distance;
-        console.debug(`[${new Date().toISOString()}] [Form Interface] Updated screen_to_lens_distance: ${data.screen_to_lens_distance}`);
-        if(data.sentTime){
-          const latency = receiveTime - new Date(data.sentTime).getTime();
-          console.debug(`[${new Date().toISOString()}] [Form Interface] Latency for screen_to_lens_distance update: ${latency} ms`);
-        }
-      }
-      if(data.inter_lens_distance !== undefined){
-        cdp.inter_lens_distance = data.inter_lens_distance;
-        console.debug(`[${new Date().toISOString()}] [Form Interface] Updated inter_lens_distance: ${data.inter_lens_distance}`);
-        if(data.sentTime){
-          const latency = receiveTime - new Date(data.sentTime).getTime();
-          console.debug(`[${new Date().toISOString()}] [Form Interface] Latency for inter_lens_distance update: ${latency} ms`);
-        }
-      }
-    } catch(e) {
-      console.error(`[${new Date().toISOString()}] [Form Interface] Error parsing WebSocket message:`, e);
     }
-  };
-  
-  function attachScreenInputListener() {
-    const screenInput = document.getElementById('form-screen_to_lens_distance');
-    if(screenInput){
-      screenInput.addEventListener('change', function(){
-        let value = parseFloat(screenInput.value);
-        const sentTime = new Date().toISOString();
-        console.debug(`[${new Date().toISOString()}] [Form Interface] screen_to_lens_distance changed to: ${value} (at ${sentTime})`);
-        ws.send(JSON.stringify({ screen_to_lens_distance: value, sentTime: sentTime }));
-        console.debug(`[${new Date().toISOString()}] [Form Interface] Sent screen_to_lens_distance update with sentTime: ${sentTime}`);
-      });
-      screenInput.addEventListener('input', function(){
-        let value = parseFloat(screenInput.value);
-        const sentTime = new Date().toISOString();
-        console.debug(`[${new Date().toISOString()}] [Form Interface] (Input Event) screen_to_lens_distance changed to: ${value} (at ${sentTime})`);
-        ws.send(JSON.stringify({ screen_to_lens_distance: value, sentTime: sentTime }));
-        console.debug(`[${new Date().toISOString()}] [Form Interface] (Input Event) Sent screen_to_lens_distance update with sentTime: ${sentTime}`);
-      });
-      console.debug(`[${new Date().toISOString()}] [Form Interface] Attached event listeners to form-screen_to_lens_distance.`);
-    } else {
-      console.warn(`[${new Date().toISOString()}] [Form Interface] form-screen_to_lens_distance not found. Retrying in 1 second.`);
-      setTimeout(attachScreenInputListener, 1000);
+  })
+
+  .directive('myScale', function () {
+    return {
+      restrict: 'A',
+      require: 'ngModel',
+      link: function (scope, elem, attrs, ngModel) {
+        var scale = parseInt(attrs.myScale, 10)
+        ngModel.$formatters.push(function (val) {
+          return val ? val * scale : null
+        })
+        ngModel.$parsers.push(function (val) {
+          var parsed = parseFloat(val)
+          return isNaN(parsed) ? null : parsed / scale
+        })
+      }
     }
-  }
-  attachScreenInputListener();
-  
-  const interInput = document.getElementById('inter_lens_distance_input');
-  if(interInput){
-    interInput.addEventListener('change', function(){
-      let value = parseFloat(interInput.value);
-      const sentTime = new Date().toISOString();
-      console.debug(`[${new Date().toISOString()}] [Form Interface] inter_lens_distance changed to: ${value} (at ${sentTime})`);
-      ws.send(JSON.stringify({ inter_lens_distance: value, sentTime: sentTime }));
-      console.debug(`[${new Date().toISOString()}] [Form Interface] Sent inter_lens_distance update with sentTime: ${sentTime}`);
-    });
-  } else {
-    console.debug(`[${new Date().toISOString()}] [Form Interface] inter_lens_distance_input not found.`);
-  }
-  
-  ws.onerror = function(event) {
-    console.error(`[${new Date().toISOString()}] [Form Interface] Live Sync WebSocket error:`, event);
-  };
-  ws.onclose = function() {
-    console.debug(`[${new Date().toISOString()}] [Form Interface] Live Sync WebSocket disconnected.`);
-  };
-})();
+  })
+
+  .directive('roundView', function () {
+    return {
+      restrict: 'A',
+      require: 'ngModel',
+      link: function (scope, elem, attrs, ngModel) {
+        var fraction_digits = parseInt(attrs.roundView, 10)
+        ngModel.$render = function () {
+          elem.val(ngModel.$isEmpty(ngModel.$viewValue) ? '' : 
+            Number(ngModel.$viewValue).toFixed(fraction_digits))
+        }
+        ngModel.$viewChangeListeners.push(ngModel.$render)
+      }
+    }
+  });

@@ -3,7 +3,7 @@ import path from 'path';
 import https from 'https';
 import Koa from 'koa';
 import send from 'koa-send';
-import koaWebsocket from 'koa-websocket';
+import { Server as SocketIOServer } from 'socket.io';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -38,7 +38,22 @@ const options = { key, cert };
 
 const port = process.env.PORT || 8000;
 
-const app = koaWebsocket(new Koa());
+const app = new Koa();
+const server = https.createServer(options, app.callback());
+server.listen(port, () => {
+  logDebug(`HTTPS server listening on port ${port}`);
+});
+const io = new SocketIOServer(server, { cors: { origin: "*" }});
+io.on("connection", (socket) => {
+  logDebug(`New socket.io client connected: ${socket.id}`);
+  socket.on("message", (data) => {
+    logDebug(`Received message from ${socket.id}:`, data);
+    socket.broadcast.emit("message", data);
+  });
+  socket.on("disconnect", () => {
+    logDebug(`Socket.io client disconnected: ${socket.id}`);
+  });
+});
 
 app.use(async (ctx, next) => {
   if (ctx.path.startsWith('/ws')) {
@@ -66,41 +81,4 @@ app.use(async (ctx, next) => {
   }
 });
 
-const wsClients = new Set();
-
-app.ws.use((ctx) => {
-  if (ctx.path === '/ws') {
-    const clientId = (ctx.websocket._socket.remoteAddress || 'unknown') + ':' + (ctx.websocket._socket.remotePort || '');
-    wsClients.add(ctx.websocket);
-    logDebug(`New WebSocket client connected (ID: ${clientId}). Total clients: ${wsClients.size}`);
-    
-    ctx.websocket.on('message', (message) => {
-      logDebug(`Received WebSocket message from client ${clientId}: ${message}`);
-      try {
-        const parsed = JSON.parse(message);
-        logDebug(`Parsed message content from client ${clientId}:`, parsed);
-      } catch (e) {
-        logWarn(`Received invalid JSON message from client ${clientId}. Raw message: ${message}`);
-      }
-      wsClients.forEach(client => {
-        if (client !== ctx.websocket && client.readyState === 1) { // OPEN state
-          client.send(message);
-          logDebug(`Forwarded message from client ${clientId} to another client. Total clients: ${wsClients.size}`);
-        }
-      });
-    });
-    
-    ctx.websocket.on('close', () => {
-      wsClients.delete(ctx.websocket);
-      logDebug(`WebSocket client disconnected (ID: ${clientId}). Total clients: ${wsClients.size}`);
-    });
-    
-    ctx.websocket.on('error', (error) => {
-      logError(`WebSocket client error (ID: ${clientId}):`, error);
-    });
-  }
-});
-
-https.createServer(options, app.callback()).listen(port, () => {
-  logDebug(`HTTPS server listening on port ${port}`);
-});
+ 

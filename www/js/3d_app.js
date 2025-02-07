@@ -108,7 +108,7 @@ function setOrientationControls(e) {
   window.removeEventListener('deviceorientation', setOrientationControls, true)
 }
 
-// TODO: websocket
+
 /**
  * @param ws {WebSocket}
 */
@@ -190,9 +190,11 @@ function init_with_cardboard_device(ws, cardboard_device) {
   //     CARDBOARD.updateBarrelDistortion(barrel_distortion, cardboard_view,
   //       CAMERA_NEAR, CAMERA_FAR, val.show_lens_center)
   //   })
-  ws.addEventListener('message', (event) => {
-    const val = JSON.parse(event.data);
-    console.log("[DEBUG] Received parameter update via WebSocket:", val);
+  ws.on("message", function(val) {
+    if (typeof val === "string") {
+      val = JSON.parse(val);
+    }
+    console.log("[DEBUG] Received parameter update via socket.io:", val);
     // Update the cardboard device parameters.
     cardboard_view.device = CARDBOARD.uriToParams(val.params_uri);
     CARDBOARD.updateBarrelDistortion(barrel_distortion, cardboard_view,
@@ -217,6 +219,13 @@ function init_with_cardboard_device(ws, cardboard_device) {
     console.log("[DEBUG] VR scene updated with new parameters.");
   });
   window.addEventListener('resize', resize, false)
+  window.cardboardScene = {
+    composer: composer,
+    cardboard_view: cardboard_view,
+    camera: camera,
+    scene: scene,
+    barrel_distortion: barrel_distortion
+  };
   window.setTimeout(resize, 1)
 
   animate()
@@ -238,22 +247,21 @@ function init() {
     setMessageVisible('message_webgl', true)
     return
   }
-  const websocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws')
-
-// Debug logging for 3D app WebSocket events
-websocket.onopen = function() {
-  console.log('[DEBUG] WebSocket connected (3D app).');
-};
-websocket.onerror = function(event) {
-  console.error('[DEBUG] WebSocket error (3D app):', event);
-};
-websocket.onclose = function() {
-  console.log('[DEBUG] WebSocket disconnected (3D app).');
-};
+  const socket = io(window.location.origin, { transports: ["websocket"] });
+  // Debug logging for 3D app socket.io events
+  socket.on("connect", function() {
+    console.log("[DEBUG] socket.io connected (3D app):", socket.id);
+  });
+  socket.on("connect_error", function(error) {
+    console.error("[DEBUG] socket.io connection error (3D app):", error);
+  });
+  socket.on("disconnect", function() {
+    console.log("[DEBUG] socket.io disconnected (3D app).");
+  });
 
   // 用默认的参数初始化
   const device = CARDBOARD.uriToParams('http://google.com/cardboard/cfg?p=CgN4eXMSBnBpY28gdR0xCCw9JY_CdT0qEAAASEIAAEhCAABcQgAAXEJYADUpXA89OggUrkc_SOGaP1AAYAA')
-  init_with_cardboard_device(websocket, device)
+  init_with_cardboard_device(socket, device)
   websocket.onerror = function(e) {
     console.error('[DEBUG] WebSocket error (3D app):', e);
   };

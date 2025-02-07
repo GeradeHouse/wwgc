@@ -23,11 +23,11 @@ These two components synchronize data in real time.
 
 Currently, the VR scene only supports swipe-based movement instead of responding to device orientation. Real-time head tracking is a core feature of Cardboard-style viewers, so two items are crucial:
 
-1. **Live Parameter Sync via WebSockets:**  
-   • Implement a local WebSocket layer that emits updates from the form fields (e.g., lens separation, screen-to-lens distance, distortion coefficients) to the VR scene in real time.  
-   • Ensure the VR rendering logic applies these parameter changes immediately, allowing calibration to happen while the viewer is in use.  
-   • Confirm that both ends (the form interface and the 3D scene) handle incoming messages and update relevant fields to stay in sync.
-    • **Note:** Currently, the viewer parameters "screen_to_lens_distance" (default value: 0.042) and "inter_lens_distance" (default value: 0.060) are defined in the application configuration (in 'www/js/app.js') and then passed to the 3D scene (in 'www/js/CardboardView.js') for initial rendering calculations (e.g., computing the eye-to-screen distance). These values are static and do not update in real time, necessitating the implementation of live synchronization via WebSockets.
+1. **Live Parameter Sync via Socket.IO:**
+   • The Angular UI continuously monitors the form fields and, when a parameter changes, emits a Socket.IO event carrying a URI that encodes the new viewer parameters.
+   • The VR scene (implemented in files such as `www/js/3d_app.js` and `www/js/Cardboard.js`) listens for this event, parses the URI using `CARDBOARD.uriToParams()`, and updates the viewer’s calibration parameters accordingly.
+   • The VR scene then updates its rendering pipeline—by re-creating the stereo effect pass, adjusting distortion correction parameters, and triggering a re-render—so that the new settings are reflected in real time.
+   • **Note:** This live synchronization now leverages Socket.IO’s robust connection management instead of raw WebSockets. If multi-device synchronization is required in the future, the server-side can be extended to broadcast parameter updates to all connected clients.
 
 2. **HTTPS for Sensor Access:**  
    • Enable HTTPS by default so mobile browsers allow orientation and motion events.  
