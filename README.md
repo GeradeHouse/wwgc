@@ -33,6 +33,7 @@ Currently, the VR scene only supports swipe-based movement instead of responding
    - Enable HTTPS by default so mobile browsers allow orientation and motion events.  
    - Use a self-signed certificate locally and verify the secure context on all devices.  
    - Confirm that the environment grants permission for motion sensors (some devices require explicit user approval).
+   - Device orientation code is already implemented through Three.js DeviceOrientationControls but requires proper HTTPS setup and permissions to function.
 
 Once these pieces are in place, any parameter change in the form will instantly appear in the VR scene, and rotating the device will adjust the viewpoint as you would expect from a true Cardboard viewer.
 
@@ -45,28 +46,37 @@ The profile generator demonstrates how to build a web VR app compatible with Car
    - Dynamic stereo view rendering
    - Live distortion correction
    - Instant scene updates on parameter changes
+   - Automatic QR code generation from viewer parameters (Still needs to be tested)
+   - Server-side broadcast support for potential multi-device sync (Not sure whether necessary)
 
 2. **VR scene rendering:**
    - WebGL-based 3D graphics using Three.js
    - Custom stereo effect pass for VR
    - Barrel distortion shader
    - Scene composition with post-processing
+   - Device orientation tracking support (requires HTTPS)
+   - Screen wakelock to prevent display timeout during VR use
 
 3. **Mobile browser support:**
    - Proper viewport configuration
    - Screen orientation handling
    - Full-screen mode support
    - Touch input detection
+   - Support for modern android mobile browsers (Chrome 44+ on Android)
 
 The main inputs needed for correct rendering are:
 - A Cardboard viewer profile (synchronized live from the UI)
 - An accurate pixel-per-inch (PPI) value for the display screen
+  - Database lookup based on the device model for known PPI values for current smartphones and otherwise manual entry (not yet implemented)
 
 Current limitations and known issues:
 
 - **Head Tracking Not Yet Implemented:** Currently relies on swipe/touch for view control
 - Physical screen properties must be detected or provided manually
 - **Antialiasing Limitations:** The distortion correction pass prevents use of standard antialiasing techniques. (WebGL2 multisampled renderbuffers or shader-based antialiasing—like [FXAA](https://github.com/mrdoob/three.js/blob/master/examples/js/shaders/FXAAShader.js)—can help.)
+- **Device Sensors:** Requires HTTPS and explicit user permission for orientation sensors
+- **3D Scene Quality:** 3D Scene quality is low and needs higher resolution textures and models for better visual fidelity (not yet implemented)
+- 3D Scene quality is low and needs higher resolution textures and models for better visual fidelity (not yet implemented)
 
 This implementation of Cardboard rendering is built on the three.js framework. If you're interested in the details, see the Cardboard*.js source files.
 
@@ -75,11 +85,15 @@ This implementation of Cardboard rendering is built on the three.js framework. I
 # Notes
 
 - **HTTPS for Sensor Access:**  
-  The secure connection is necessary for VR functionality. Mobile browsers require HTTPS to grant access to orientation and motion sensors.
+  The secure connection is necessary for VR functionality. Mobile browsers require HTTPS to grant access to orientation and motion sensors. After enabling HTTPS, the browser may still require explicit user permission to access device orientation sensors.
 - **Local Network Usage:**  
   This server is intended only for local network use. Do not expose it to the internet.
 - **QR Code Generation:**  
   Currently, the QR Code is not auto-generated. Copy the URL from the viewer parameters section and use an external tool to generate the QR Code.
+- **Mobile Browser Support:**
+  - Android: Chrome 44 or newer
+  - Browser must support WebGL and deviceorientation events
+  - HTTPS required for sensor access
 
 ---
 
@@ -89,4 +103,5 @@ This implementation of Cardboard rendering is built on the three.js framework. I
   Implement a Socket.IO layer that updates the VR scene in real time.
 - **Real-time Head Tracking:**  
   Improve the VR scene to respond to device orientation instead of swipe-based movement.
-```
+- **3D Scene Quality:**  
+  Enhance the 3D scene with higher resolution textures and models for better visual fidelity.

@@ -97,3 +97,75 @@ Once the certificate is installed as a trusted CA, your Android device will trus
 https://192.168.31.18:8000/3d.html
 ```
 without any security warnings.
+
+---
+
+# Setup Guide
+
+## Prerequisites
+
+### Desktop (Configuration Interface)
+- Modern web browser
+- Node.js 14.x or newer
+- NPM (usually comes with Node.js)
+
+### Mobile Device (VR Viewer)
+- **Android:** Chrome 44 or newer
+- **iOS:** Safari 8 or newer
+- WebGL support
+- Device orientation sensors
+- Screen size larger than the viewer's visible area
+- HTTPS connection for sensor access
+
+## HTTPS Setup
+
+1. **Generate Local Certificates:**
+   The application requires HTTPS for mobile browser sensor access. Use mkcert to generate valid certificates for local development:
+
+   ```bash
+   # Install mkcert
+   npm install -g mkcert
+
+   # Generate certificates
+   mkcert create-ca
+   mkcert create-cert
+   ```
+
+   This will create `cert.pem` and `key.pem` in your project root.
+
+2. **Install Root CA on Mobile Device:**
+   - Copy the generated rootCA.crt to your mobile device
+   - Install the certificate in your device's trusted certificates
+   - On iOS, go to Settings > General > About > Certificate Trust Settings and enable the root certificate
+   - On Android, go to Settings > Security > Install from storage and select the certificate
+
+## Running the Local Web Server
+
+To launch the local web server on your PC:
+
+1. Open a terminal in the project root.
+2. Run the following command:
+    ```sh
+    npm install && node webserver/main.js
+    ```
+   
+This command starts the web server on port 8000 **using HTTPS**. Because modern browsers require a secure context (HTTPS) for VR functionality, ensure you access the application via `https://localhost:8000` (or the appropriate local network URL). Also, confirm that your router is configured for port forwarding if you intend to access the 3D calibration page (`3d.html`) from a mobile device on your local network.
+
+## Troubleshooting
+
+### Device Orientation Not Working
+1. Ensure you're accessing the site via HTTPS
+2. Check that your browser has permission to access device orientation:
+   - On iOS: Settings > Safari > Motion & Orientation Access
+   - On Android: Chrome > Site Settings > Motion Sensors
+3. Some devices may require user interaction (like tapping the screen) before enabling orientation sensors
+
+### QR Code Scanner Issues
+- Ensure your mobile device's screen is not too dim
+- QR code is automatically generated when parameters change
+- The URL in the QR code must be accessible from your mobile device (use local network IP, not localhost)
+
+### WebGL Not Available
+- Verify your mobile browser supports WebGL
+- Some older devices may not support the required WebGL features
+- Try updating your browser to the latest version
