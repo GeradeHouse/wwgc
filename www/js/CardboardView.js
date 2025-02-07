@@ -16,15 +16,32 @@
 
 "use strict";
 
-/*globals document, window, CARDBOARD, WURFL, THREE*/
+/**
+ * @namespace CARDBOARD
+ * @description Core namespace for Cardboard viewer functionality
+ */
 
+/**
+ * Creates a new CardboardView instance for handling VR display parameters
+ * @class
+ * @param {Object} screen_params - Physical screen parameters
+ * @param {Object} device_params - VR device configuration parameters
+ */
 CARDBOARD.CardboardView = function(screen_params, device_params) {
   this.screen = screen_params;
   this.device = device_params;
 };
 
+/**
+ * CardboardView prototype methods for VR calculations and parameter management
+ * @memberof CARDBOARD.CardboardView
+ */
 CARDBOARD.CardboardView.prototype = {
 
+  /**
+   * Calculates the field of view for the left eye
+   * @returns {Object} FOV angles in degrees {left, right, bottom, top}
+   */
   getLeftEyeFov: function() {
     var screen = this.screen;
     var cdp = this.device;
@@ -58,6 +75,10 @@ CARDBOARD.CardboardView.prototype = {
     };
   },
 
+  /**
+   * Calculates FOV and viewport for left eye without distortion correction
+   * @returns {Object} Contains fov angles and viewport dimensions
+   */
   getLeftEyeFovAndViewportNoDistortionCorrection: function() {
     var screen = this.screen;
     var cdp = this.device;
@@ -118,6 +139,14 @@ CARDBOARD.CardboardView.prototype.update = function() {
 
 var METERS_PER_INCH = 0.0254;
 
+/**
+ * ScreenParams class for managing physical screen measurements
+ * @class
+ * @param {number} width - Screen width in pixels
+ * @param {number} height - Screen height in pixels
+ * @param {number} dpi - Screen dots per inch
+ * @param {number} border_size_meters - Physical border size in meters
+ */
 CARDBOARD.ScreenParams = function(width, height, dpi, border_size_meters) {
   this.width = width;
   this.height = height;
@@ -151,6 +180,11 @@ CARDBOARD.getYEyeOffsetMeters = function(screen_params, device_params) {
   }
 };
 
+/**
+ * DistortionParams class for lens distortion calculations
+ * @class
+ * @param {Array<number>} coefficients - Distortion coefficients
+ */
 CARDBOARD.DistortionParams = function(coefficients) {
   this.coefficients = coefficients;
 };
@@ -231,9 +265,16 @@ CARDBOARD.updateBarrelDistortion = function(barrel_distortion, cardboard_view,
   barrel_distortion.uniforms.showCenter.value = show_center ? 1 : 0;
 };
 
-// Manually maintained map from WURFL.js device name to screen PPI
-// (assuming square pixels).  An optional match regex can be provided,
-// otherwise the key is expected to match exactly.
+
+
+/**
+ * Helper functions for screen parameters detection
+ * @namespace CARDBOARD.SCREEN_PPI_BY_DEVICE
+ * @description Maps device names to their screen PPI values
+ * Manually maintained map from WURFL.js device name to screen PPI
+ * (assuming square pixels).  An optional match regex can be provided,
+ * otherwise the key is expected to match exactly.
+ */
 CARDBOARD.SCREEN_PPI_BY_DEVICE = {
   // Device name                [ PPI, (/Regex/) ]
   'Apple iPhone 6': [326],
@@ -312,7 +353,10 @@ CARDBOARD.findScreenParams = function() {
   return new CARDBOARD.ScreenParams(1920, 1080, 445, 0);
 };
 
-/* WebSocket Live Sync for Viewer Parameters (3D Viewer) */
+/**
+ * WebSocket live sync implementation
+ * Enables real-time parameter updates between configurator and viewer
+ */
 (function(){
   const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
   const socketUrl = protocol + window.location.host + '/ws';

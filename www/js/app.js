@@ -16,10 +16,20 @@
  * limitations under the License.
  */
 
+/**
+ * @fileoverview Main Angular application module for the WWGC Configurator
+ * Implements the core UI functionality and parameter management
+ * @module app
+ */
+
 'use strict'
 /*global alert, btoa, confirm, window, document, XMLSerializer,
   angular, gapi, qrcode, Snap, WURFL, CARDBOARD, CONFIG, ga*/
 
+/**
+ * Constants for QR code generation and viewer parameters
+ * @constant
+ */
 const QR_PIXELS_PER_CELL = 3
 
 // For QR type 5, 32 characters of usable data.
@@ -40,6 +50,11 @@ const PARAM_QR_CUSTOM_PADDING = {
   ],
 }
 
+/**
+ * Helper parameter modal configurations
+ * Defines help text and UI elements for each parameter
+ * @constant
+ */
 const HELPER_PARAMETER_MODAL = {
   'vendor': {
     focus: 'vendor',
@@ -93,6 +108,11 @@ const HELPER_PARAMETER_MODAL = {
   },
 }
 
+/**
+ * Canvas drawing utilities for distortion visualization
+ * @param {CanvasContext} ctx - Canvas 2D context
+ * @param {Object} axes - Axes configuration
+ */
 function showAxes(ctx, axes) {
   const x0 = axes.x0, h = ctx.canvas.height
   const y0 = axes.y0, w = ctx.canvas.width
@@ -215,6 +235,10 @@ function initGapi() {
   }
 }
 
+/**
+ * Angular module definition with dependencies
+ * @module myApp
+ */
 angular
   .module('myApp', ['ui.bootstrap', 'ngAnimate', 'ngMaterial', 'ngScrollSpy'])
 
@@ -310,6 +334,10 @@ angular
     }
   })
 
+  /**
+   * Main controller for the configurator interface
+   * @controller myController
+   */
   .controller('myController', ['$scope', '$http', '$timeout', '$q', '$window', '$mdDialog',
     function ($scope, $http, $timeout, $q, $window, $mdDialog) {
       $http.get('/api/localip').then(function(response) {
