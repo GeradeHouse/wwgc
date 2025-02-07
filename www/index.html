@@ -261,7 +261,7 @@
                 </div>
                 <div class="form-group">
                   <p class="form-label">Primary button type<md-button class="md-flat helper show-md"
-                      ng-click="focus='primary_button'; showDetailsModal($event);"><img src="images/help-grey.png"
+                      ng-click="focus='primary_button'; showDetailsModal($event);" aria-label="Help for Primary Button Type"><img src="images/help-grey.png"
                         height="19" width="19" alt="?" /></md-button></p>
                   <md-radio-group data-ng-value="choice.id" ng-model="params.primary_button" class="md-primary"
                     ng-focus="focus='primary_button';" ng-change="focus='primary_button';save();">
@@ -275,7 +275,7 @@
                 </div>
                 <div class="form-group">
                   <p class="form-label">Screen to lens distance (mm) <md-button class="md-flat helper show-md"
-                      ng-click="focus='screen_to_lens_distance'; showDetailsModal($event);"><img
+                      ng-click="focus='screen_to_lens_distance'; showDetailsModal($event);" aria-label="Help for Screen to Lens Distance"><img
                         src="images/help-grey.png" height="19" width="19" alt="?" /></md-button></p>
                   <input type="number" id="form-screen_to_lens_distance" min="0" inputmode="numeric"
                     class="form-control" ng-model="params.screen_to_lens_distance" ng-change="save()" my-scale="1000"
@@ -285,7 +285,7 @@
                 </div>
                 <div class="form-group">
                   <p class="form-label">Inter-lens distance (mm)<md-button class="md-flat helper show-md"
-                      ng-click="focus='inter_lens_distance'; showDetailsModal($event);"><img src="images/help-grey.png"
+                      ng-click="focus='inter_lens_distance'; showDetailsModal($event);" aria-label="Help for Inter-lens Distance"><img src="images/help-grey.png"
                         height="19" width="19" alt="?" /></md-button></p>
                   <input type="number" id="form-inter_lens_distance" min="0" inputmode="numeric" class="form-control"
                     ng-model="params.inter_lens_distance" ng-change="save()" my-scale="1000" round-view="0"
@@ -294,7 +294,7 @@
                 </div>
                 <div class="form-group">
                   <p class="form-label">Screen vertical alignment<md-button class="md-flat helper show-md"
-                      ng-click="focus='vertical_alignment'; showDetailsModal($event);"><img src="images/help-grey.png"
+                      ng-click="focus='vertical_alignment'; showDetailsModal($event);" aria-label="Help for Screen Vertical Alignment"><img src="images/help-grey.png"
                         height="19" width="19" alt="?" /></md-button></p>
                   <md-radio-group ng-model="params.vertical_alignment" class="md-primary" ng-change="save();"
                     ng-focus="focus='vertical_alignment'">
@@ -309,7 +309,7 @@
                 <div ng-if="params.vertical_alignment != vertical_alignment_type.CENTER">
                   <div class="form-group">
                     <p class="form-label">Tray to lens-center distance (mm)<md-button class="md-flat helper show-md"
-                        ng-click="focus='tray_to_lens_distance'; showDetailsModal($event);"><img
+                        ng-click="focus='tray_to_lens_distance'; showDetailsModal($event);" aria-label="Help for Tray to Lens-center Distance"><img
                           src="images/help-grey.png" height="19" width="19" alt="?" /></md-button></p>
                     <input type="number" min="0" inputmode="numeric" class="form-control"
                       ng-model="params.tray_to_lens_distance" ng-change="save()" my-scale="1000" round-view="0"
@@ -319,7 +319,7 @@
                 </div>
                 <div class="form-group">
                   <p class="form-label">Distortion coefficients<md-button class="md-flat helper show-md"
-                      ng-click="focus='distortion_coefficients'; showDetailsModal($event);"><img
+                      ng-click="focus='distortion_coefficients'; showDetailsModal($event);" aria-label="Help for Distortion Coefficients"><img
                         src="images/help-grey.png" height="19" width="19" alt="?" /></md-button></p>
                   <p class="distortion-container">
                     <span ng-repeat="name in ['1', '2']">
@@ -342,7 +342,7 @@
                 <div ng-class="{'active': isAdvancedExpanded}" class="advanced_options">
                   <div class="form-group">
                     <p class="form-label">Field-of-view angles<md-button class="md-flat helper show-md"
-                        ng-click="focus='left_eye_field_of_view_angles'; showDetailsModal($event);"><img
+                        ng-click="focus='left_eye_field_of_view_angles'; showDetailsModal($event);" aria-label="Help for Field-of-view Angles"><img
                           src="images/help-grey.png" height="19" width="19" alt="?" /></md-button></p>
                     <span ng-repeat="name in ['Outer', 'Inner', 'Top', 'Bottom']">
                       {{name}} (&deg;) <input class="form-control" type="number" inputmode="numeric" min="0"
@@ -359,8 +359,7 @@
                       ng-attr-disabled="{{ params.primary_button == 1 || undefined }}">Viewer contains some embedded
                       magnets. Selecting this checkbox will inform all apps built using the Cardboard SDKs that the
                       smartphone&rsquo;s magnetometer should not be used.</md-checkbox><md-button
-                      class="md-flat helper show-md" ng-click="focus='has_magnet'; showDetailsModal($event);"
-                      flex="18"><img src="images/help-grey.png" height="19" width="19" alt="?" /></md-button>
+                      class="md-flat helper show-md" ng-click="focus='has_magnet'; showDetailsModal($event);" aria-label="Help for Embedded Magnets" flex="18"><img src="images/help-grey.png" height="19" width="19" alt="?" /></md-button>
                   </div>
                 </div>
                 <div class="buttons">
