@@ -63,3 +63,5 @@ rootCA.crt
 
 docs/WebXR Device API/
 www/js/3d_app.js
+docs/WebXR.md
+docs/3d_app_dual_control_plan.md

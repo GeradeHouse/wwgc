@@ -19,7 +19,7 @@ The tool assists you in deriving the set of parameters needed to define a viewer
 
 These two components synchronize data in real time using Socket.IO, allowing for immediate visual feedback as parameters are adjusted.
 
-## Important Pending Implementation
+## Achieved Implementations and Future Improvements
 
 Currently, the VR scene only supports swipe-based movement instead of responding to device orientation. Real-time head tracking is a core feature of Cardboard-style viewers, so two items are crucial:
 
@@ -29,9 +29,9 @@ Currently, the VR scene only supports swipe-based movement instead of responding
    - The VR scene then updates its rendering pipeline—by re-creating the stereo effect pass, adjusting distortion correction parameters, and triggering a re-render—so that the new settings are reflected in real time.
    - This live synchronization now leverages Socket.IO's robust connection management instead of raw WebSockets. If multi-device synchronization is required in the future, the server-side can be extended to broadcast parameter updates to all connected clients.
 
-2. **HTTPS for Sensor Access (🚧 IN PROGRESS):**  
-   - Enable HTTPS by default so mobile browsers allow orientation and motion events.  
-   - Use a self-signed certificate locally and verify the secure context on all devices.  
+2. **HTTPS for Sensor Access (✓ COMPLETED):**  
+   - Currently using a self-signed certificate locally the secure connection has been successfully implemented.
+   - In the future improving the secure HTTPS connection so it will be set by default and the user will not have to manually accept the certificate.
    - Confirm that the environment grants permission for motion sensors (some devices require explicit user approval).
    - Device orientation code is already implemented through Three.js DeviceOrientationControls but requires proper HTTPS setup and permissions to function.
 
@@ -85,7 +85,7 @@ This implementation of Cardboard rendering is built on the three.js framework. I
 # Notes
 
 - **HTTPS for Sensor Access:**  
-  The secure connection is necessary for VR functionality. Mobile browsers require HTTPS to grant access to orientation and motion sensors. After enabling HTTPS, the browser may still require explicit user permission to access device orientation sensors.
+  The secure connection is necessary for VR functionality. Mobile browsers require HTTPS to grant access to orientation and motion sensors. A secure HTTPS is acchieved, yet the browser may still require explicit user permission to access device orientation sensors.
 - **Local Network Usage:**  
   This server is intended only for local network use. Do not expose it to the internet.
 - **QR Code Generation:**  
@@ -96,15 +96,6 @@ This implementation of Cardboard rendering is built on the three.js framework. I
   - HTTPS required for sensor access
 
 ---
-
-# Future Improvements
-
-- **Real-time Head Tracking:**  
-  Improve the VR scene to respond to device orientation instead of swipe-based movement.
-- **3D Scene Quality:**  
-  Enhance the 3D scene with higher resolution textures and models for better visual fidelity.
-
-
 
 # Development Guide
 
@@ -151,3 +142,12 @@ To focus on specific debug information, filter console output by:
 - "[3D Viewer]" - For VR scene updates
 - "[DEBUG]" - For general debugging
 - "socket.io" - For connection events
+
+---
+
+# Future Improvements
+
+- **Real-time Head Tracking:**  
+  Improve the VR scene to respond to device orientation besides the swipe-based movement.
+- **3D Scene Quality:**  
+  Enhance the 3D scene with higher resolution textures and models for better visual fidelity.
