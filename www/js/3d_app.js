@@ -17,7 +17,7 @@
 'use strict'
 
 /*global alert, document, screen, window, init,
-  THREE, WURFL, Firebase, screenfull, CARDBOARD, CONFIG, ga*/
+  THREE, WURFL, screenfull, CARDBOARD, CONFIG, ga*/
 
 // meter units
 var CAMERA_HEIGHT = 0
@@ -183,13 +183,14 @@ function init_with_cardboard_device(ws, cardboard_device) {
   barrel_distortion.renderToScreen = true
   composer.addPass(barrel_distortion)
 
-  // ws.on('value',
-  //   function (data) {
-  //     var val = data.val()
-  //     cardboard_view.device = CARDBOARD.uriToParams(val.params_uri)
-  //     CARDBOARD.updateBarrelDistortion(barrel_distortion, cardboard_view,
-  //       CAMERA_NEAR, CAMERA_FAR, val.show_lens_center)
-  //   })
+  // Using Socket.IO:
+  // ws.on("message", function (data) {
+  //   var val = JSON.parse(data);
+  //   cardboard_view.device = CARDBOARD.uriToParams(val.params_uri)
+  //   CARDBOARD.updateBarrelDistortion(barrel_distortion, cardboard_view,
+  //     CAMERA_NEAR, CAMERA_FAR, val.show_lens_center)
+  // })
+
   ws.on("message", function(val) {
     if (typeof val === "string") {
       val = JSON.parse(val);
@@ -259,14 +260,14 @@ function init() {
     console.log("[DEBUG] socket.io disconnected (3D app).");
   });
 
-  // 用默认的参数初始化
+  // Initialize with default parameters
   const device = CARDBOARD.uriToParams('http://google.com/cardboard/cfg?p=CgN4eXMSBnBpY28gdR0xCCw9JY_CdT0qEAAASEIAAEhCAABcQgAAXEJYADUpXA89OggUrkc_SOGaP1AAYAA')
   init_with_cardboard_device(socket, device)
-  websocket.onerror = function(e) {
-    console.error('[DEBUG] WebSocket error (3D app):', e);
+  socket.onerror = function(e) {
+    console.error('[DEBUG] socket.io error (3D app):', e);
   };
-  websocket.onclose = function() {
-    console.log('[DEBUG] WebSocket disconnected (3D app).');
+  socket.onclose = function() {
+    console.log('[DEBUG] socket.io disconnected (3D app).');
   };
 }
 init()

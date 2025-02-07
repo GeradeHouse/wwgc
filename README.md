@@ -60,13 +60,11 @@ This implementation of Cardboard rendering is built on the three.js framework. I
 To run your own instance:
 
 1. **Launch the Local Web Server:**  
-   The local web server is located in the `webserver` directory and now uses HTTPS via Node.js with Koa.
+   The local web server is located in the `webserver` directory and now uses HTTPS via Node.js with Socket.IO.
 2. **Configure Port Forwarding:**  
    Set up port forwarding on your router for the web server’s port (default is 8000) so that the `3d.html` page can be accessed from your mobile device.
 3. **Generate QR Codes:**  
    Use an external QR Code generator (for example, an online tool) to create a QR Code from the URL displayed in "Save or load viewer parameters."
-
-No further configuration (e.g., Firebase settings) is required.
 
 ---
 
@@ -90,15 +88,12 @@ This command starts the web server on port 8000 **using HTTPS**. Because modern 
   Ensure you have Node.js installed. The built-in Node.js modules (fs, path, net, child_process, https) are used, so no extra installation is required for these.
 
 - **NPM Packages:**  
-  Install the following packages:
-  - [koa](https://www.npmjs.com/package/koa)
-  - [@koa/router](https://www.npmjs.com/package/@koa/router)
-  - [koa-send](https://www.npmjs.com/package/koa-send)
-  - [koa-websocket](https://www.npmjs.com/package/koa-websocket)
+  Install the following package:
+  - [socket.io](https://www.npmjs.com/package/socket.io)
 
-A one-liner PowerShell command to upgrade Node.js (using Chocolatey) and install the required packages is:
+A one-liner PowerShell command to upgrade Node.js (using Chocolatey) and install the required package is:
 ```powershell
-choco upgrade nodejs -y; npm install koa @koa/router koa-send koa-websocket
+choco upgrade nodejs -y; npm install socket.io
 ```
 
 ---
@@ -175,7 +170,8 @@ without any security warnings.
 
 # Future Improvements
 
-- **Live Parameter Sync via WebSockets:**  
-  Implement a WebSocket layer that updates the VR scene in real time.
+- **Live Parameter Sync via Socket.IO:**  
+  Implement a Socket.IO layer that updates the VR scene in real time.
 - **Real-time Head Tracking:**  
   Improve the VR scene to respond to device orientation instead of swipe-based movement.
+```

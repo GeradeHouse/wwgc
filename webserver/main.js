@@ -1,8 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
-import Koa from 'koa';
-import send from 'koa-send';
 import { Server as SocketIOServer } from 'socket.io';
 import { fileURLToPath } from 'url';
 
@@ -38,11 +36,31 @@ const options = { key, cert };
 
 const port = process.env.PORT || 8000;
 
-const app = new Koa();
-const server = https.createServer(options, app.callback());
+// Create an HTTPS server using native Node.js
+const server = https.createServer(options, (req, res) => {
+  // Serve static files from the ../www directory.
+  let filePath = req.url;
+  if (filePath === '/' || filePath === '') {
+    filePath = '/index.html';
+  }
+  const fullPath = path.join(__dirname, '../www', filePath);
+  fs.readFile(fullPath, (err, data) => {
+    if (err) {
+      logWarn(`File not found for path ${req.url}. Returning 404.`);
+      res.statusCode = 404;
+      res.end('Not Found');
+    } else {
+      logDebug(`Serving static file: ${req.url} requested from ${req.socket.remoteAddress || 'unknown IP'}`);
+      res.statusCode = 200;
+      res.end(data);
+    }
+  });
+});
+
 server.listen(port, () => {
   logDebug(`HTTPS server listening on port ${port}`);
 });
+
 const io = new SocketIOServer(server, { cors: { origin: "*" }});
 io.on("connection", (socket) => {
   logDebug(`New socket.io client connected: ${socket.id}`);
@@ -55,30 +73,14 @@ io.on("connection", (socket) => {
   });
 });
 
-app.use(async (ctx, next) => {
-  if (ctx.path.startsWith('/ws')) {
-    return await next();
-  }
-  // If the request is for legacy endpoints such as '/datachannel', return 404 quietly.
-  if (ctx.path === '/datachannel' || ctx.path === '/api/localip') {
-    logDebug(`Legacy endpoint "${ctx.path}" requested; returning 404 without error.`);
-    ctx.status = 404;
-    ctx.body = 'Not Found';
-    return;
-  }
-  try {
-    logDebug(`Serving static file: ${ctx.path} requested from ${ctx.ip || 'unknown IP'}`);
-    await send(ctx, ctx.path, { root: path.join(__dirname, '../www'), index: 'index.html' });
-    if (!ctx.body) {
-      logWarn(`File not found for path ${ctx.path}. Returning 404.`);
-      ctx.status = 404;
-      ctx.body = 'Not Found';
-    }
-  } catch (err) {
-    logError(`Error serving static file for path ${ctx.path}:`, err);
-    ctx.status = err.status || 404;
-    ctx.body = 'Not Found';
+
+// The following middleware related to legacy endpoints has been preserved for compatibility,
+// but note that Koa is no longer used.
+server.on('request', (req, res) => {
+  // If the request is for legacy endpoints such as '/datachannel' or '/api/localip', return 404.
+  if (req.url === '/datachannel' || req.url === '/api/localip') {
+    logDebug(`Legacy endpoint "${req.url}" requested; returning 404 without error.`);
+    res.statusCode = 404;
+    res.end('Not Found');
   }
 });
-
- 

@@ -112,6 +112,9 @@ Object.defineProperties(CARDBOARD.CardboardView.prototype, {
     },
   },
 });
+CARDBOARD.CardboardView.prototype.update = function() {
+  console.log("[DEBUG] CardboardView updated with new device parameters.");
+};
 
 var METERS_PER_INCH = 0.0254;
 
