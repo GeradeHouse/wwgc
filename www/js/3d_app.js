@@ -81,6 +81,7 @@ function animate(t) {
 }
 
 function setOrientationControls(e) {
+  console.log("setOrientationControls called");
   if (!e.alpha) {
     return
   }
@@ -135,15 +136,15 @@ function init_with_cardboard_device(ws, cardboard_device) {
   camera.position.set(0, CAMERA_HEIGHT, 0)
   scene.add(camera)
 
-  controls = new THREE.OrbitControls(camera, element)
-  controls.rotateUp(Math.PI / 4)
-  controls.target.set(
-    camera.position.x + 0.1,
-    camera.position.y,
-    camera.position.z
-  )
-  controls.noZoom = true
-  controls.noPan = true
+  //controls = new THREE.OrbitControls(camera, element)
+  //controls.rotateUp(Math.PI / 4)
+  //controls.target.set(
+  //  camera.position.x + 0.1,
+  //  camera.position.y,
+  //  camera.position.z
+  //)
+  //controls.noZoom = true
+  //controls.noPan = true
 
   window.addEventListener('deviceorientation', setOrientationControls, true)
 
