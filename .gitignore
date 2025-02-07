@@ -59,3 +59,7 @@ localhost.crt
 .gitignore
 www/rootCA.crt
 rootCA.crt
+
+
+docs/WebXR Device API/
+www/js/3d_app.js
