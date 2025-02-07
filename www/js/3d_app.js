@@ -34,6 +34,9 @@ var controls
 var element, container
 
 var clock = new THREE.Clock()
+var deviceControls = null;
+var dummyDevice = new THREE.Object3D();
+var BLEND_FACTOR = 0.5;
 
 // Update the message text if on iOS
 if (!screenfull.enabled) {
@@ -72,46 +75,32 @@ function resize() {
 }
 
 function animate(t) {
-  var delta = clock.getDelta()
-  camera.updateProjectionMatrix()
-  controls.update(delta)
-  composer.render()
-
-  window.requestAnimationFrame(animate)
+  var delta = clock.getDelta();
+  camera.updateProjectionMatrix();
+  controls.update(delta);
+  if (deviceControls) {
+    deviceControls.update();
+    // Blend the orbit control's rotation (applied to camera) and device orientation (captured in dummyDevice)
+    var blendedQuat = new THREE.Quaternion();
+    THREE.Quaternion.slerp(camera.quaternion, dummyDevice.quaternion, blendedQuat, BLEND_FACTOR);
+    camera.quaternion.copy(blendedQuat);
+  }
+  composer.render();
+  window.requestAnimationFrame(animate);
 }
 
 function setOrientationControls(e) {
   console.log("setOrientationControls called");
   if (!e.alpha) {
-    return
+    return;
   }
-
-  controls = new THREE.DeviceOrientationControls(camera, true)
-  controls.connect()
-  controls.update()
-  // Android
-  element.addEventListener('click', function () {
-    // Must be called here because initiated by user
-    if (document.fullscreenEnabled) {
-      screen.wakelock.release()
-    } else {
-      element.requestFullscreen()
-      screen.wakelock.request()
-    }
-
-    screenfull.toggle()
-  })
-
-  document.addEventListener(screenfull.raw.fullscreenchange, function () {
-    if (screenfull.isFullscreen) {
-      // TODO: moz prefix for Firefox
-      screen.orientation.lock('landscape')
-    } else {
-      screen.orientation.unlock()
-    }
-  })
-
-  window.removeEventListener('deviceorientation', setOrientationControls, true)
+  // Initialize DeviceOrientationControls on a dummy object to capture device orientation separately
+  deviceControls = new THREE.DeviceOrientationControls(dummyDevice, true);
+  deviceControls.connect();
+  deviceControls.update();
+  
+  // Remove the event listener after initializing device controls
+  window.removeEventListener('deviceorientation', setOrientationControls, true);
 }
 
 
