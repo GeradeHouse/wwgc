@@ -1,3 +1,32 @@
+// // Setup client logging via Socket.IO
+// console.log('[CLIENT LOG] 3d_app.js loaded');
+// if (typeof io !== 'undefined') {
+//   const socket = io();
+//   const originalLog = console.log;
+//   const originalWarn = console.warn;
+//   const originalError = console.error;
+
+//   function sendClientLog(level, ...args) {
+//     const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+//     socket.emit('client-log', `[CLIENT LOG] ${level}: ${message}`);
+//   }
+
+//   console.log = function(...args) {
+//     sendClientLog('log', ...args);
+//     originalLog.apply(console, args);
+//   };
+
+//   console.warn = function(...args) {
+//     sendClientLog('warn', ...args);
+//     originalWarn.apply(console, args);
+//   };
+
+//   console.error = function(...args) {
+//     sendClientLog('error', ...args);
+//     originalError.apply(console, args);
+//   };
+// }
+
 /*!
  * Copyright 2015 Google Inc. All Rights Reserved.
  *
@@ -105,27 +134,27 @@ function setOrientationControls(e) {
 
 console.log("3d_app.js loaded");
 
-// Override console.log, console.warn, and console.error to send logs via socket.io
-(function() {
-  var oldLog = console.log;
-  var oldWarn = console.warn;
-  var oldError = console.error;
+// // Override console.log, console.warn, and console.error to send logs via socket.io
+// (function() {
+//   var oldLog = console.log;
+//   var oldWarn = console.warn;
+//   var oldError = console.error;
 
-  console.log = function() {
-    socket.emit('client-log', Array.from(arguments).join(' '));
-    oldLog.apply(console, arguments);
-  };
+//   console.log = function() {
+//     socket.emit('client-log', Array.from(arguments).join(' '));
+//     oldLog.apply(console, arguments);
+//   };
 
-  console.warn = function() {
-    socket.emit('client-warn', Array.from(arguments).join(' '));
-    oldWarn.apply(console, arguments);
-  };
+//   console.warn = function() {
+//     socket.emit('client-warn', Array.from(arguments).join(' '));
+//     oldWarn.apply(console, arguments);
+//   };
 
-  console.error = function() {
-    socket.emit('client-error', Array.from(arguments).join(' '));
-    oldError.apply(console, arguments);
-  };
-})();
+//   console.error = function() {
+//     socket.emit('client-error', Array.from(arguments).join(' '));
+//     oldError.apply(console, arguments);
+//   };
+// })();
 
 
 /**
@@ -134,7 +163,8 @@ console.log("3d_app.js loaded");
  * @param {Object} cardboard_device - Cardboard device parameters
  */
 function init_with_cardboard_device(ws, cardboard_device) {
-  renderer = new THREE.WebGLRenderer()
+  renderer = new THREE.WebGLRenderer();
+  // renderer.setClearColor(0x000000, 1);
   element = renderer.domElement
   element.onclick = () => {
     element.requestFullscreen({})
@@ -278,6 +308,25 @@ function init() {
     return
   }
   const socket = io(window.location.origin, { transports: ["websocket"] });
+  window.socket = socket;
+  (function() {
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    console.log = function(...args) {
+      socket.emit('client-log', args.join(' '));
+      originalLog.apply(console, args);
+    };
+    console.warn = function(...args) {
+      socket.emit('client-warn', args.join(' '));
+      originalWarn.apply(console, args);
+    };
+    console.error = function(...args) {
+      socket.emit('client-error', args.join(' '));
+      originalError.apply(console, args);
+    };
+  })();
+
   // Debug logging for 3D app socket.io events
   socket.on("connect", function() {
     console.log("[DEBUG] socket.io connected (3D app):", socket.id);

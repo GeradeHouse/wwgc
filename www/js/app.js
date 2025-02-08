@@ -476,7 +476,7 @@ angular
       // Initialize socket.io connection with automatic reconnection
       function connectSocketIO() {
         console.debug("Connecting to socket.io...");
-        const socket = io(window.location.origin, { transports: ["websocket"] });
+        const socket = io("https://192.168.31.18:8000", { transports: ["websocket"], timeout: 15000, secure: true, rejectUnauthorized: false });
         socket.on("connect", function() {
           console.log(`[${new Date().toISOString()}] socket.io connected: ${socket.id}`);
           if ($scope.pendingSave) {

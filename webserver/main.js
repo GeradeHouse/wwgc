@@ -113,6 +113,9 @@ io.on("connection", (socket) => {
     logDebug(`Received message from ${socket.id}:`, data);
     socket.broadcast.emit("message", data);
   });
+  socket.on("client-log", function(message) {
+    logDebug(`[CLIENT LOG] ${message}`);
+  });
   
   // Handle client disconnections
   socket.on("disconnect", () => {
