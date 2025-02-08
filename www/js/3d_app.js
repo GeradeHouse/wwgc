@@ -78,12 +78,9 @@ function animate(t) {
   var delta = clock.getDelta();
   camera.updateProjectionMatrix();
   controls.update(delta);
-  if (deviceControls) {
+  if (deviceControls && controls.state === controls.STATE.NONE) {
     deviceControls.update();
-    // Blend the orbit control's rotation (applied to camera) and device orientation (captured in dummyDevice)
-    var blendedQuat = new THREE.Quaternion();
-    THREE.Quaternion.slerp(camera.quaternion, dummyDevice.quaternion, blendedQuat, BLEND_FACTOR);
-    camera.quaternion.copy(blendedQuat);
+    camera.quaternion.copy(dummyDevice.quaternion);
   }
   composer.render();
   window.requestAnimationFrame(animate);
@@ -94,14 +91,41 @@ function setOrientationControls(e) {
   if (!e.alpha) {
     return;
   }
-  // Initialize DeviceOrientationControls on a dummy object to capture device orientation separately
+  console.log("Device orientation event detected");
+
+  // For Android and Chrome, explicit permission is not required.
   deviceControls = new THREE.DeviceOrientationControls(dummyDevice, true);
   deviceControls.connect();
   deviceControls.update();
-  
-  // Remove the event listener after initializing device controls
+  console.log("DeviceOrientationControls initialized");
+
+  // Remove the event listener for device orientation after attempting initialization
   window.removeEventListener('deviceorientation', setOrientationControls, true);
 }
+
+console.log("3d_app.js loaded");
+
+// Override console.log, console.warn, and console.error to send logs via socket.io
+(function() {
+  var oldLog = console.log;
+  var oldWarn = console.warn;
+  var oldError = console.error;
+
+  console.log = function() {
+    socket.emit('client-log', Array.from(arguments).join(' '));
+    oldLog.apply(console, arguments);
+  };
+
+  console.warn = function() {
+    socket.emit('client-warn', Array.from(arguments).join(' '));
+    oldWarn.apply(console, arguments);
+  };
+
+  console.error = function() {
+    socket.emit('client-error', Array.from(arguments).join(' '));
+    oldError.apply(console, arguments);
+  };
+})();
 
 
 /**
