@@ -1,5 +1,5 @@
-// This file is now an ES module.
-// Import necessary classes from Three.js and its examples:
+// This file is an ES module.
+// Import necessary classes from Three.js and its examples.
 import * as THREE from "../node_modules/three/build/three.module.js";
 import { OrbitControls } from "../node_modules/three/examples/jsm/controls/OrbitControls.js";
 import { EffectComposer } from "../node_modules/three/examples/jsm/postprocessing/EffectComposer.js";
@@ -7,24 +7,23 @@ import { ShaderPass } from "../node_modules/three/examples/jsm/postprocessing/Sh
 import { MaskPass } from "../node_modules/three/examples/jsm/postprocessing/MaskPass.js";
 import { CopyShader } from "../node_modules/three/examples/jsm/shaders/CopyShader.js";
 
-// Expose THREE globally (for legacy scripts that may expect it)
+// Expose THREE globally for any legacy scripts.
 window.THREE = THREE;
 
-// Define meter constants.
+// Define constants.
 const CAMERA_HEIGHT = 0;
 const CAMERA_NEAR = 0.1;
 const CAMERA_FAR = 100;
 
 // Global variables.
 var camera, scene, renderer, composer;
-var controls; // legacy fallback OrbitControls
+var controls; // fallback OrbitControls (legacy mode)
 var element, container;
 var clock = new THREE.Clock();
 var BLEND_FACTOR = 0.5;
 
-// Remove legacy DeviceOrientationControls fallback code entirely,
-// since we rely on WebXR and OrbitControls fallback only.
-
+// (We no longer use DeviceOrientationControls fallback.)
+  
 // Update message text if screenfull is not enabled.
 if (!window.screenfull || !screenfull.enabled) {
   document.getElementById("title").innerHTML = "Rotate phone horizontally";
@@ -39,8 +38,8 @@ function isFullscreen() {
   const screen_width = Math.max(window.screen.width, window.screen.height);
   const screen_height = Math.min(window.screen.width, window.screen.height);
   return window.document.hasFocus() &&
-    (screen_width === window.innerWidth) &&
-    (screen_height === window.innerHeight);
+         (screen_width === window.innerWidth) &&
+         (screen_height === window.innerHeight);
 }
 
 function resize() {
@@ -56,7 +55,7 @@ function resize() {
   }
 }
 
-// Legacy animate function.
+// Legacy animate function (used in fallback mode).
 // When an immersive XR session is active, renderer.setAnimationLoop(animate) is used.
 function animate(t) {
   const delta = clock.getDelta();
@@ -67,8 +66,6 @@ function animate(t) {
   }
   composer.render();
 }
-
-// (Optional) Remove setOrientationControls and legacy deviceorientation fallback.
 
 // Log that the script loaded.
 console.log("3d_app.js loaded");
@@ -109,13 +106,11 @@ async function initXRSession() {
 
 //
 // Fallback initialization for Cardboard device parameters.
-// This fallback uses OrbitControls only and relies on the Cardboard libraries.
+// This fallback uses OrbitControls only and the Cardboard libraries.
 function init_with_cardboard_device(ws, cardboard_device) {
   renderer = new THREE.WebGLRenderer();
   element = renderer.domElement;
-  element.onclick = () => {
-    element.requestFullscreen({});
-  };
+  element.onclick = () => { element.requestFullscreen({}); };
   container = document.getElementById('example');
   container.appendChild(element);
 
@@ -144,11 +139,9 @@ function init_with_cardboard_device(ws, cardboard_device) {
   controls.noZoom = true;
   controls.noPan = true;
 
-  // Add a HemisphereLight.
   const light = new THREE.HemisphereLight(0x777777, 0x000000, 0.6);
   scene.add(light);
 
-  // Create an environment box with grid textures.
   const box_width = 10;
   const texture = THREE.ImageUtils.loadTexture('textures/patterns/box.png');
   texture.wrapS = THREE.RepeatWrapping;
@@ -181,23 +174,17 @@ function init_with_cardboard_device(ws, cardboard_device) {
   composer.addPass(barrel_distortion);
 
   ws.on("message", function(val) {
-    if (typeof val === "string") {
-      val = JSON.parse(val);
-    }
+    if (typeof val === "string") { val = JSON.parse(val); }
     console.log("[DEBUG] Received parameter update via socket.io:", val);
     if (window.socket) window.socket.emit('client-log', "[DEBUG] Received parameter update via socket.io: " + JSON.stringify(val));
     cardboard_view.device = CARDBOARD.uriToParams(val.params_uri);
     CARDBOARD.updateBarrelDistortion(barrel_distortion, cardboard_view, CAMERA_NEAR, CAMERA_FAR, val.show_lens_center);
-    if (composer.passes.length > 0) {
-      composer.removePass(composer.passes[0]);
-    }
+    if (composer.passes.length > 0) { composer.removePass(composer.passes[0]); }
     const stereoEffect = new THREE.CardboardStereoEffect(cardboard_view, scene, camera);
     composer.addPass(stereoEffect);
     composer.reset();
     camera.updateProjectionMatrix();
-    if (typeof cardboard_view.update === 'function') {
-      cardboard_view.update();
-    }
+    if (typeof cardboard_view.update === 'function') { cardboard_view.update(); }
     composer.render();
     console.log("[DEBUG] VR scene updated with new parameters.");
     if (window.socket) window.socket.emit('client-log', "[DEBUG] VR scene updated with new parameters.");
