@@ -24,8 +24,7 @@
   <title>Cardboard viewer profile generator: 3D view</title>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-<script src="js/three.min.js"></script>
-
+  <script src="js/three.min.js"></script>
   <link href='//fonts.googleapis.com/css?family=Roboto:400,700,300,100' rel='stylesheet' type='text/css'>
   <style>
     body {
@@ -74,6 +73,21 @@
     img {
       width: 50%;
     }
+
+    /* Style for the Enter VR button */
+    #enterXR {
+      position: absolute;
+      z-index: 2;
+      top: 10px;
+      left: 10px;
+      padding: 12px 18px;
+      font-size: 16px;
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
   </style>
 </head>
 
@@ -103,7 +117,11 @@
       </tr>
     </table>
   </div>
+  <!-- The container for the 3D scene -->
   <div id="example"></div>
+  
+  <!-- The Enter VR button -->
+  <button id="enterXR">Enter VR</button>
 
   <script type="module">
     import * as THREE from "../node_modules/three/build/three.module.js";
@@ -127,6 +145,38 @@
   <script src="js/config.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="js/3d_app.js"></script>
+  
+  <!-- XR Session button logic -->
+  <script>
+    document.getElementById('enterXR').addEventListener('click', async function() {
+      if (navigator.xr) {
+        try {
+          const session = await navigator.xr.requestSession('immersive-vr', { optionalFeatures: ['local-floor'] });
+          console.log("[DEBUG] XR session acquired:", session);
+          // Log via socket:
+          if (window.socket) window.socket.emit('client-log', "[DEBUG] XR session acquired: " + JSON.stringify(session));
+          // Enable XR on the renderer and set the session.
+          renderer.xr.enabled = true;
+          renderer.xr.setSession(session);
+          // Dispose legacy controls if they exist.
+          if (controls) {
+            controls.dispose();
+            controls = null;
+          }
+          // Remove legacy deviceorientation event listener.
+          window.removeEventListener('deviceorientation', setOrientationControls, true);
+          // Use the XR animation loop.
+          renderer.setAnimationLoop(animate);
+        } catch (e) {
+          console.error("Failed to start immersive-vr session:", e);
+          if (window.socket) window.socket.emit('client-error', "Failed to start immersive-vr session: " + e);
+        }
+      } else {
+        console.warn("navigator.xr not available");
+        if (window.socket) window.socket.emit('client-warn', "navigator.xr not available");
+      }
+    });
+  </script>
 </body>
 
 </html>
