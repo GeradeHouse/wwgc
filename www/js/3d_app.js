@@ -122,7 +122,8 @@ function animate(t) {
 
 function setOrientationControls(e) {
   console.log("setOrientationControls called with event:", e);
-  if (!e.alpha) {
+  // Changed check so that an alpha value of 0 is accepted.
+  if (e.alpha == null) {
     console.warn("Device orientation event missing alpha value. Aborting initialization.");
     return;
   }

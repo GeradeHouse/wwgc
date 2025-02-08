@@ -1,3 +1,4 @@
+// www\js\third-party\threejs\controls\DeviceOrientationControls.js
 /**
  * @author richt / http://richt.me
  * @author WestLangley / http://github.com/WestLangley
