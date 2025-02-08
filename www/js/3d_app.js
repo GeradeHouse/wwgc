@@ -110,25 +110,31 @@ function animate(t) {
   if (deviceControls && controls.state === controls.STATE.NONE) {
     deviceControls.update();
     camera.quaternion.copy(dummyDevice.quaternion);
+    // Log debug info every second to monitor headtracking updates
+    if (!window._lastDebug || (performance.now() - window._lastDebug) > 1000) {
+      window._lastDebug = performance.now();
+      console.log("[DEBUG] deviceControls updated, dummy quaternion:", dummyDevice.quaternion);
+    }
   }
   composer.render();
   window.requestAnimationFrame(animate);
 }
 
 function setOrientationControls(e) {
-  console.log("setOrientationControls called");
+  console.log("setOrientationControls called with event:", e);
   if (!e.alpha) {
+    console.warn("Device orientation event missing alpha value. Aborting initialization.");
     return;
   }
-  console.log("Device orientation event detected");
-
+  console.log("Device orientation event detected. alpha:", e.alpha, ", beta:", e.beta, ", gamma:", e.gamma);
+  
   // For Android and Chrome, explicit permission is not required.
   deviceControls = new THREE.DeviceOrientationControls(dummyDevice, true);
   deviceControls.connect();
   deviceControls.update();
-  console.log("DeviceOrientationControls initialized");
-
-  // Remove the event listener for device orientation after attempting initialization
+  console.log("DeviceOrientationControls initialized. Dummy device quaternion:", dummyDevice.quaternion);
+  
+  // Remove event listener to prevent multiple initializations
   window.removeEventListener('deviceorientation', setOrientationControls, true);
 }
 
@@ -176,6 +182,16 @@ function init_with_cardboard_device(ws, cardboard_device) {
 
   // NOTE: CardboardStereoPass will ignore camera FOV and aspect ratio
   camera = new THREE.PerspectiveCamera(90, 1, CAMERA_NEAR, CAMERA_FAR)
+  
+  // The following two event listeners were erroneously placed before 'controls' is defined.
+  // They have been commented out to preserve functionality and avoid errors.
+  // controls.addEventListener('start', function(event) {
+  //   console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
+  // });
+  // controls.addEventListener('end', function(event) {
+  //   console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
+  // });
+  
   camera.position.set(0, CAMERA_HEIGHT, 0)
   scene.add(camera)
 
@@ -185,7 +201,92 @@ function init_with_cardboard_device(ws, cardboard_device) {
     camera.position.x + 0.1,
     camera.position.y,
     camera.position.z
+  );
+  console.log('[DEBUG] Adding OrbitControls event listeners');
+  if (controls) {
+    controls.addEventListener('start', function(event) {
+      console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
+    });
+    controls.addEventListener('end', function(event) {
+      console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
+    });
+  }
+
+;(function() {
+  if (controls) {
+    controls.addEventListener('start', function(event) {
+      /* 
+      // The following duplicate event listener block was causing syntax issues.
+      if (controls) {
+        controls.addEventListener('start', function(event) {
+          console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
+        });
+        controls.addEventListener('end', function(event) {
+          console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
+        });
+      }
+      */
+      console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
+    });
+    controls.addEventListener('end', function(event) {
+      console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
+    });
+  }
+})();
+
+
+(function() {
+  if (controls) {
+    controls.addEventListener('start', function(event) {
+      console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
+    });
+    controls.addEventListener('end', function(event) {
+      console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
+    });
+  }
+})();
+
+
+controls.addEventListener('start', function(event) {
+  console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
+});
+controls.addEventListener('end', function(event) {
+  /* 
+  // The following inner duplicate block was removed to fix syntax errors.
+  if (controls) {
+    controls.addEventListener('start', function(event) {
+      console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
+    });
+    controls.addEventListener('end', function(event) {
+      console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
+    });
+  }
+  */
+  console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
+});
+
+;controls.addEventListener('start', function(event) {
+  console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
+});
+;controls.addEventListener('end', function(event) {
+  console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
+});
+
+controls.addEventListener('start', function(event) {
+  // Removed duplicate inner event listener block.
+  console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
+});
+controls.addEventListener('end', function(event) {
+  console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
+});
+
+/*
+    camera.position.x + 0.1,
+    camera.position.y,
+    camera.position.z
   )
+*/
+
   controls.noZoom = true
   controls.noPan = true
 
