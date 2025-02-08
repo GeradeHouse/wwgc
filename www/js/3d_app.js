@@ -1,157 +1,81 @@
-// // Setup client logging via Socket.IO
-// console.log('[CLIENT LOG] 3d_app.js loaded');
-// if (typeof io !== 'undefined') {
-//   const socket = io();
-//   const originalLog = console.log;
-//   const originalWarn = console.warn;
-//   const originalError = console.error;
+// This file is now an ES module.
+// Import necessary classes from Three.js and its examples:
+import * as THREE from "../node_modules/three/build/three.module.js";
+import { OrbitControls } from "../node_modules/three/examples/jsm/controls/OrbitControls.js";
+import { EffectComposer } from "../node_modules/three/examples/jsm/postprocessing/EffectComposer.js";
+import { ShaderPass } from "../node_modules/three/examples/jsm/postprocessing/ShaderPass.js";
+import { MaskPass } from "../node_modules/three/examples/jsm/postprocessing/MaskPass.js";
+import { CopyShader } from "../node_modules/three/examples/jsm/shaders/CopyShader.js";
 
-//   function sendClientLog(level, ...args) {
-//     const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
-//     socket.emit('client-log', `[CLIENT LOG] ${level}: ${message}`);
-//   }
+// Expose THREE globally (for legacy scripts that may expect it)
+window.THREE = THREE;
 
-//   console.log = function(...args) {
-//     sendClientLog('log', ...args);
-//     originalLog.apply(console, args);
-//   };
+// Define meter constants.
+const CAMERA_HEIGHT = 0;
+const CAMERA_NEAR = 0.1;
+const CAMERA_FAR = 100;
 
-//   console.warn = function(...args) {
-//     sendClientLog('warn', ...args);
-//     originalWarn.apply(console, args);
-//   };
-
-//   console.error = function(...args) {
-//     sendClientLog('error', ...args);
-//     originalError.apply(console, args);
-//   };
-// }
-
-/*!
- * Copyright 2015 Google Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-'use strict'
-/**
- * @fileoverview Main 3D application module for the WWGC Configurator
- * Implements the core 3D rendering and interaction functionality
- * @module 3d_app
- */
-
-/*global alert, document, screen, window, init,
-  THREE, WURFL, screenfull, CARDBOARD, CONFIG, ga*/
-
-// meter units
-var CAMERA_HEIGHT = 0
-var CAMERA_NEAR = 0.1
-var CAMERA_FAR = 100
-
-var camera, scene, renderer, composer
-var controls // legacy fallback OrbitControls
-var deviceControls = null; // legacy DeviceOrientationControls fallback
-var element, container
-
-var clock = new THREE.Clock()
-// dummyDevice is used by legacy DeviceOrientationControls
-var dummyDevice = new THREE.Object3D();
+// Global variables.
+var camera, scene, renderer, composer;
+var controls; // legacy fallback OrbitControls
+var element, container;
+var clock = new THREE.Clock();
 var BLEND_FACTOR = 0.5;
 
-// Update the message text if on iOS
-if (!screenfull.enabled) {
-  document.getElementById("title").innerHTML = "Rotate phone horizontally"
+// Remove legacy DeviceOrientationControls fallback code entirely,
+// since we rely on WebXR and OrbitControls fallback only.
+
+// Update message text if screenfull is not enabled.
+if (!window.screenfull || !screenfull.enabled) {
+  document.getElementById("title").innerHTML = "Rotate phone horizontally";
 }
 
 function setMessageVisible(id, is_visible) {
-  var css_visibility = is_visible ? "block" : "none"
-  document.getElementById(id).style.display = css_visibility
+  const css_visibility = is_visible ? "block" : "none";
+  document.getElementById(id).style.display = css_visibility;
 }
 
 function isFullscreen() {
-  var screen_width = Math.max(window.screen.width, window.screen.height)
-  var screen_height = Math.min(window.screen.width, window.screen.height)
-
+  const screen_width = Math.max(window.screen.width, window.screen.height);
+  const screen_height = Math.min(window.screen.width, window.screen.height);
   return window.document.hasFocus() &&
     (screen_width === window.innerWidth) &&
-    (screen_height === window.innerHeight)
+    (screen_height === window.innerHeight);
 }
 
 function resize() {
-  var width = container.offsetWidth
-  var height = container.offsetHeight
-
-  camera.aspect = width / height
-  camera.updateProjectionMatrix()
-
-  renderer.setSize(width, height)
-  renderer.setViewport(0, 0, width, height)
-
-  composer.setSize(width, height)
-
-  if (WURFL.is_mobile) {
-    setMessageVisible('message_fullscreen', !isFullscreen())
+  const width = container.offsetWidth;
+  const height = container.offsetHeight;
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+  renderer.setSize(width, height);
+  renderer.setViewport(0, 0, width, height);
+  composer.setSize(width, height);
+  if (window.WURFL && WURFL.is_mobile) {
+    setMessageVisible('message_fullscreen', !isFullscreen());
   }
 }
 
-//
-// Legacy animate function (used in fallback mode)
+// Legacy animate function.
 // When an immersive XR session is active, renderer.setAnimationLoop(animate) is used.
-//
 function animate(t) {
-  var delta = clock.getDelta();
+  const delta = clock.getDelta();
   // In XR mode, the camera pose is updated automatically.
   if (!renderer.xr.getSession()) {
     camera.updateProjectionMatrix();
-    if (controls) {
-      controls.update(delta);
-    }
-    if (deviceControls && controls && controls.state === controls.STATE.NONE) {
-      deviceControls.update();
-      camera.quaternion.copy(dummyDevice.quaternion);
-      if (!window._lastDebug || (performance.now() - window._lastDebug) > 1000) {
-        window._lastDebug = performance.now();
-        console.log("[DEBUG] deviceControls updated, dummy quaternion:", dummyDevice.quaternion);
-        if (window.socket) window.socket.emit('client-log', "[DEBUG] deviceControls updated, dummy quaternion: " + JSON.stringify(dummyDevice.quaternion));
-      }
-    }
+    if (controls) controls.update(delta);
   }
   composer.render();
 }
 
-//
-// Legacy initialization for device orientation (fallback)
-// This function is only used if WebXR immersive-vr is not available.
-//
-function setOrientationControls(e) {
-  console.log("setOrientationControls called with event:", e);
-  if (e.alpha == null) {
-    console.warn("Device orientation event missing alpha value. Aborting initialization.");
-    return;
-  }
-  console.log("Device orientation event detected. alpha:", e.alpha, ", beta:", e.beta, ", gamma:", e.gamma);
-  deviceControls = new THREE.DeviceOrientationControls(dummyDevice, true);
-  deviceControls.connect();
-  deviceControls.update();
-  console.log("DeviceOrientationControls initialized. Dummy device quaternion:", dummyDevice.quaternion);
-  window.removeEventListener('deviceorientation', setOrientationControls, true);
-}
+// (Optional) Remove setOrientationControls and legacy deviceorientation fallback.
 
+// Log that the script loaded.
 console.log("3d_app.js loaded");
 if (window.socket) window.socket.emit('client-log', "3d_app.js loaded");
 
 //
-// New XR initialization function
+// New XR initialization function.
 //
 async function initXRSession() {
   if (navigator.xr) {
@@ -167,7 +91,6 @@ async function initXRSession() {
           controls.dispose();
           controls = null;
         }
-        window.removeEventListener('deviceorientation', setOrientationControls, true);
         renderer.setAnimationLoop(animate);
         return;
       } else {
@@ -185,24 +108,24 @@ async function initXRSession() {
 }
 
 //
-// Fallback initialization for Cardboard device parameters
-//
+// Fallback initialization for Cardboard device parameters.
+// This fallback uses OrbitControls only and relies on the Cardboard libraries.
 function init_with_cardboard_device(ws, cardboard_device) {
   renderer = new THREE.WebGLRenderer();
-  element = renderer.domElement
+  element = renderer.domElement;
   element.onclick = () => {
-    element.requestFullscreen({})
-  }
-  container = document.getElementById('example')
-  container.appendChild(element)
+    element.requestFullscreen({});
+  };
+  container = document.getElementById('example');
+  container.appendChild(element);
 
-  scene = new THREE.Scene()
-  camera = new THREE.PerspectiveCamera(90, 1, CAMERA_NEAR, CAMERA_FAR)
-  camera.position.set(0, CAMERA_HEIGHT, 0)
-  scene.add(camera)
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(90, 1, CAMERA_NEAR, CAMERA_FAR);
+  camera.position.set(0, CAMERA_HEIGHT, 0);
+  scene.add(camera);
 
-  controls = new THREE.OrbitControls(camera, element)
-  controls.rotateUp(Math.PI / 4)
+  controls = new OrbitControls(camera, element);
+  controls.rotateUp(Math.PI / 4);
   controls.target.set(
     camera.position.x + 0.1,
     camera.position.y,
@@ -210,91 +133,52 @@ function init_with_cardboard_device(ws, cardboard_device) {
   );
   console.log('[DEBUG] Adding OrbitControls event listeners');
   if (window.socket) window.socket.emit('client-log', "[DEBUG] Adding OrbitControls event listeners");
-  if (controls) {
-    controls.addEventListener('start', function(event) {
-      console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
-      if (window.socket) window.socket.emit('client-log', "[DEBUG] OrbitControls start: user initiated swipe " + JSON.stringify(event));
-    });
-    controls.addEventListener('end', function(event) {
-      console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
-      if (window.socket) window.socket.emit('client-log', "[DEBUG] OrbitControls end: swipe interaction ended " + JSON.stringify(event));
-    });
-  }
-
-  ;(function() {
-    if (controls) {
-      controls.addEventListener('start', function(event) {
-        console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
-      });
-      controls.addEventListener('end', function(event) {
-        console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
-      });
-    }
-  })();
-
-  (function() {
-    if (controls) {
-      controls.addEventListener('start', function(event) {
-        console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
-      });
-      controls.addEventListener('end', function(event) {
-        console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
-      });
-    }
-  })();
-
   controls.addEventListener('start', function(event) {
     console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
+    if (window.socket) window.socket.emit('client-log', "[DEBUG] OrbitControls start: user initiated swipe " + JSON.stringify(event));
   });
   controls.addEventListener('end', function(event) {
     console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
+    if (window.socket) window.socket.emit('client-log', "[DEBUG] OrbitControls end: swipe interaction ended " + JSON.stringify(event));
   });
+  controls.noZoom = true;
+  controls.noPan = true;
 
-  ;controls.addEventListener('start', function(event) {
-    console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
-  });
-  ;controls.addEventListener('end', function(event) {
-    console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
-  });
+  // Add a HemisphereLight.
+  const light = new THREE.HemisphereLight(0x777777, 0x000000, 0.6);
+  scene.add(light);
 
-  controls.noZoom = true
-  controls.noPan = true
-
-  window.addEventListener('deviceorientation', setOrientationControls, true)
-
-  var light = new THREE.HemisphereLight(0x777777, 0x000000, 0.6)
-  scene.add(light)
-
-  var box_width = 10
-  var texture = THREE.ImageUtils.loadTexture('textures/patterns/box.png')
-  texture.wrapS = THREE.RepeatWrapping
-  texture.wrapT = THREE.RepeatWrapping
-  texture.repeat.set(box_width, box_width)
-  var face_colors = [0xA020A0, 0x20A020, 0x50A0F0, 0x404040, 0xA0A0A0, 0xA0A020]
-  var materialArray = []
-  face_colors.forEach(function (c) {
+  // Create an environment box with grid textures.
+  const box_width = 10;
+  const texture = THREE.ImageUtils.loadTexture('textures/patterns/box.png');
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(box_width, box_width);
+  const face_colors = [0xA020A0, 0x20A020, 0x50A0F0, 0x404040, 0xA0A0A0, 0xA0A020];
+  const materialArray = [];
+  face_colors.forEach(function(c) {
     materialArray.push(new THREE.MeshBasicMaterial({
       map: texture,
       color: c,
       side: THREE.BackSide
-    }))
-  })
-  var env_cube = new THREE.Mesh(
+    }));
+  });
+  const env_cube = new THREE.Mesh(
     new THREE.BoxGeometry(box_width, box_width, box_width),
     new THREE.MeshFaceMaterial(materialArray)
-  )
-  scene.add(env_cube)
+  );
+  scene.add(env_cube);
 
-  var screen_params = CARDBOARD.findScreenParams()
-  var cardboard_view = new CARDBOARD.CardboardView(screen_params, cardboard_device)
+  const screen_params = CARDBOARD.findScreenParams();
+  const cardboard_view = new CARDBOARD.CardboardView(screen_params, cardboard_device);
 
-  composer = new THREE.EffectComposer(renderer)
-  composer.addPass(new THREE.CardboardStereoEffect(cardboard_view, scene, camera))
+  composer = new EffectComposer(renderer);
+  composer.addPass(new THREE.CardboardStereoEffect(cardboard_view, scene, camera));
 
-  var barrel_distortion = new THREE.ShaderPass(THREE.CardboardBarrelDistortion)
-  barrel_distortion.uniforms.backgroundColor.value = new THREE.Vector4(1, 0, 0, 1)
-  barrel_distortion.renderToScreen = true
-  composer.addPass(barrel_distortion)
+  const barrel_distortion = new ShaderPass(THREE.CardboardBarrelDistortion);
+  barrel_distortion.uniforms.backgroundColor.value = new THREE.Vector4(1, 0, 0, 1);
+  barrel_distortion.renderToScreen = true;
+  composer.addPass(barrel_distortion);
 
   ws.on("message", function(val) {
     if (typeof val === "string") {
@@ -318,7 +202,7 @@ function init_with_cardboard_device(ws, cardboard_device) {
     console.log("[DEBUG] VR scene updated with new parameters.");
     if (window.socket) window.socket.emit('client-log', "[DEBUG] VR scene updated with new parameters.");
   });
-  window.addEventListener('resize', resize, false)
+  window.addEventListener('resize', resize, false);
   window.cardboardScene = {
     composer: composer,
     cardboard_view: cardboard_view,
@@ -326,34 +210,33 @@ function init_with_cardboard_device(ws, cardboard_device) {
     scene: scene,
     barrel_distortion: barrel_distortion
   };
-  window.setTimeout(resize, 1)
-  window.requestAnimationFrame(animate)
+  window.setTimeout(resize, 1);
+  window.requestAnimationFrame(animate);
 }
 
 /**
- * Checks for WebGL support in the current browser
- * @returns {boolean} True if WebGL is supported, false otherwise
+ * Checks for WebGL support in the current browser.
+ * @returns {boolean} True if WebGL is supported, false otherwise.
  */
 function hasWebGl() {
-  var canvas = document.createElement("canvas")
+  const canvas = document.createElement("canvas");
   try {
-    return Boolean(canvas.getContext("webgl") ||
-      canvas.getContext("experimental-webgl"))
+    return Boolean(canvas.getContext("webgl") || canvas.getContext("experimental-webgl"));
   } catch (x) {
-    return false
+    return false;
   }
 }
 
 /**
- * Initializes the 3D application
- * Sets up WebSocket connection and initializes the scene < Let's see if this works!
+ * Initializes the 3D application.
+ * Sets up WebSocket connection and initializes the scene.
  */
 function init() {
   if (!hasWebGl()) {
-    console.log('WebGL not available')
+    console.log('WebGL not available');
     if (window.socket) window.socket.emit('client-log', "WebGL not available");
-    setMessageVisible('message_webgl', true)
-    return
+    setMessageVisible('message_webgl', true);
+    return;
   }
   const socket = io(window.location.origin, { transports: ["websocket"] });
   window.socket = socket;
@@ -385,7 +268,7 @@ function init() {
     console.log("[DEBUG] socket.io disconnected (3D app).");
   });
 
-  const device = CARDBOARD.uriToParams('http://google.com/cardboard/cfg?p=CgN4eXMSBnBpY28gdR0xCCw9JY_CdT0qEAAASEIAAEhCAABcQgAAXEJYADUpXA89OggUrkc_SOGaP1AAYAA')
+  const device = CARDBOARD.uriToParams('http://google.com/cardboard/cfg?p=CgN4eXMSBnBpY28gdR0xCCw9JY_CdT0qEAAASEIAAEhCAABcQgAAXEJYADUpXA89OggUrkc_SOGaP1AAYAA');
   
   initXRSession().then(() => {
     if (!renderer.xr.getSession()) {
@@ -400,4 +283,4 @@ function init() {
     console.log('[DEBUG] socket.io disconnected (3D app).');
   };
 }
-init()
+init();
