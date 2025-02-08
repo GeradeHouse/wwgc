@@ -1,11 +1,11 @@
 // This file is an ES module.
 // Import necessary classes from Three.js and its examples.
-import * as THREE from "../node_modules/three/build/three.module.js";
-import { OrbitControls } from "../node_modules/three/examples/jsm/controls/OrbitControls.js";
-import { EffectComposer } from "../node_modules/three/examples/jsm/postprocessing/EffectComposer.js";
-import { ShaderPass } from "../node_modules/three/examples/jsm/postprocessing/ShaderPass.js";
-import { MaskPass } from "../node_modules/three/examples/jsm/postprocessing/MaskPass.js";
-import { CopyShader } from "../node_modules/three/examples/jsm/shaders/CopyShader.js";
+import * as THREE from "../../node_modules/three/build/three.module.js";
+import { OrbitControls } from "../../node_modules/three/examples/jsm/controls/OrbitControls.js";
+import { EffectComposer } from "../../node_modules/three/examples/jsm/postprocessing/EffectComposer.js";
+import { ShaderPass } from "../../node_modules/three/examples/jsm/postprocessing/ShaderPass.js";
+import { MaskPass } from "../../node_modules/three/examples/jsm/postprocessing/MaskPass.js";
+import { CopyShader } from "../../node_modules/three/examples/jsm/shaders/CopyShader.js";
 
 // Expose THREE globally for any legacy scripts.
 window.THREE = THREE;

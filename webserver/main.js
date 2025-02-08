@@ -74,11 +74,20 @@ const port = process.env.PORT || 8000;
  */
 const server = https.createServer(options, (req, res) => {
   // Handle static file serving
-  let filePath = req.url;
-  if (filePath === '/' || filePath === '') {
-    filePath = '/index.html';  // Default to index.html for root requests
+  let fullPath;
+  if (req.url.startsWith("/node_modules/")) {
+    // Remove '/node_modules/' and serve from the project's node_modules directory.
+    let relativePath = req.url.slice("/node_modules/".length);
+    fullPath = path.join(__dirname, '../node_modules', relativePath);
+  } else {
+    let filePath = req.url;
+    if (filePath === '/' || filePath === '') {
+      filePath = 'index.html';  // Default to index.html for root requests
+    } else if (filePath.startsWith('/')) {
+      filePath = filePath.slice(1);
+    }
+    fullPath = path.join(__dirname, '../www', filePath);
   }
-  const fullPath = path.join(__dirname, '../www', filePath);
   fs.readFile(fullPath, (err, data) => {
     if (err) {
       logWarn(`File not found for path ${req.url}. Returning 404.`);
@@ -90,7 +99,6 @@ const server = https.createServer(options, (req, res) => {
       res.end(data);
     }
   });
-
 });
 
 // Start the HTTPS server

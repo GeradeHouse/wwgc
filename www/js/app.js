@@ -474,61 +474,61 @@ angular
         "primary_button": DeviceParams.ButtonType.NONE,
       }
       // Initialize socket.io connection with automatic reconnection
-      function connectSocketIO() {
-        console.debug("Connecting to socket.io...");
-        const socket = io("https://192.168.31.18:8000", { transports: ["websocket"], timeout: 15000, secure: true, rejectUnauthorized: false });
-        socket.on("connect", function() {
-          console.log(`[${new Date().toISOString()}] socket.io connected: ${socket.id}`);
-          if ($scope.pendingSave) {
-            $scope.pendingSave = false;
-            $scope.save();
-          }
-        });
-        socket.on("message", function(data) {
-          const receiveTime = Date.now();
-          console.debug(`[${new Date().toISOString()}] Received message via socket.io:`, data);
-          try {
-            if(data.screen_to_lens_distance !== undefined) {
-              $scope.params.screen_to_lens_distance = data.screen_to_lens_distance;
-              console.debug(`[${new Date().toISOString()}] Updated screen_to_lens_distance: ${data.screen_to_lens_distance}`);
-              if(data.sentTime) {
-                const latency = receiveTime - new Date(data.sentTime).getTime();
-                console.debug(`[${new Date().toISOString()}] Latency for screen_to_lens_distance update: ${latency} ms`);
-              }
-            }
-            if(data.inter_lens_distance !== undefined) {
-              $scope.params.inter_lens_distance = data.inter_lens_distance;
-              console.debug(`[${new Date().toISOString()}] Updated inter_lens_distance: ${data.inter_lens_distance}`);
-              if(data.sentTime) {
-                const latency = receiveTime - new Date(data.sentTime).getTime();
-                console.debug(`[${new Date().toISOString()}] Latency for inter_lens_distance update: ${latency} ms`);
-              }
-            }
-          } catch(e) {
-            console.error(`[${new Date().toISOString()}] Error processing socket.io message:`, e);
-          }
-        });
-        socket.on("disconnect", function() {
-          console.warn(`[${new Date().toISOString()}] socket.io disconnected. Reconnecting...`);
-          setTimeout(connectSocketIO, 2000);
-        });
-        socket.on("connect_error", function(error) {
-          console.error(`[${new Date().toISOString()}] socket.io connection error:`, error);
-        });
-        $scope.ws = socket;
-      }
-      connectSocketIO();
+      // function connectSocketIO() {
+      //   console.debug("Connecting to socket.io...");
+      //   const socket = io("https://192.168.31.18:8000", { transports: ["websocket"], timeout: 5000, secure: true, rejectUnauthorized: false });
+      //   socket.on("connect", function() {
+      //     console.log(`[${new Date().toISOString()}] socket.io connected: ${socket.id}`);
+      //     if ($scope.pendingSave) {
+      //       $scope.pendingSave = false;
+      //       $scope.save();
+      //     }
+      //   });
+      //   socket.on("message", function(data) {
+      //     const receiveTime = Date.now();
+      //     console.debug(`[${new Date().toISOString()}] Received message via socket.io:`, data);
+      //     try {
+      //       if(data.screen_to_lens_distance !== undefined) {
+      //         $scope.params.screen_to_lens_distance = data.screen_to_lens_distance;
+      //         console.debug(`[${new Date().toISOString()}] Updated screen_to_lens_distance: ${data.screen_to_lens_distance}`);
+      //         if(data.sentTime) {
+      //           const latency = receiveTime - new Date(data.sentTime).getTime();
+      //           console.debug(`[${new Date().toISOString()}] Latency for screen_to_lens_distance update: ${latency} ms`);
+      //         }
+      //       }
+      //       if(data.inter_lens_distance !== undefined) {
+      //         $scope.params.inter_lens_distance = data.inter_lens_distance;
+      //         console.debug(`[${new Date().toISOString()}] Updated inter_lens_distance: ${data.inter_lens_distance}`);
+      //         if(data.sentTime) {
+      //           const latency = receiveTime - new Date(data.sentTime).getTime();
+      //           console.debug(`[${new Date().toISOString()}] Latency for inter_lens_distance update: ${latency} ms`);
+      //         }
+      //       }
+      //     } catch(e) {
+      //       console.error(`[${new Date().toISOString()}] Error processing socket.io message:`, e);
+      //     }
+      //   });
+      //   socket.on("disconnect", function() {
+      //     console.warn(`[${new Date().toISOString()}] socket.io disconnected. Reconnecting...`);
+      //     setTimeout(connectSocketIO, 2000);
+      //   });
+      //   socket.on("connect_error", function(error) {
+      //     console.error(`[${new Date().toISOString()}] socket.io connection error:`, error);
+      //   });
+      //   $scope.ws = socket;
+      // }
+      // connectSocketIO();
       
       $scope.save = function () {
         console.log(`[${new Date().toISOString()}] Save triggered.`);
-        if (!$scope.ws || !$scope.ws.connected) {
-          console.warn(`[${new Date().toISOString()}] socket.io not connected. Save pending.`);
-          $scope.pendingSave = true;
-          return;
-        }
+        // if (!$scope.ws || !$scope.ws.connected) {
+        //   console.warn(`[${new Date().toISOString()}] socket.io not connected. Save pending.`);
+        //   $scope.pendingSave = true;
+        //   return;
+        // }
         $scope.data.update_timestamp = new Date().getTime();
         $scope.data.params_uri = CARDBOARD.paramsToUri($scope.params);
-        $scope.ws.emit("message", { params_uri: $scope.data.params_uri, show_lens_center: true });
+        // $scope.ws.emit("message", { params_uri: $scope.data.params_uri, show_lens_center: true });
         localStorage.setItem('data', JSON.stringify($scope.data));
         distortionPlot($scope.params.distortion_coefficients[0], $scope.params.distortion_coefficients[1]);
       }
