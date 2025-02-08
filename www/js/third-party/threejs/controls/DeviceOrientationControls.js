@@ -20,12 +20,15 @@ THREE.DeviceOrientationControls = function ( object ) {
 
 	this.deviceOrientation = {};
 	this.screenOrientation = 0;
+	if ( typeof socket !== 'undefined' ) {
+		socket.emit('client-log', '[DEBUG] DeviceOrientationControls: Initial deviceOrientation and screenOrientation set.');
+	}
 
 	var onDeviceOrientationChangeEvent = function ( event ) {
 
 		scope.deviceOrientation = event;
 		if ( typeof socket !== 'undefined' ) {
-			socket.emit('client-log', '[DEBUG] DeviceOrientationControls: onDeviceOrientationChangeEvent: ' + JSON.stringify(event));
+			socket.emit('client-log', '[DEBUG] DeviceOrientationControls: onDeviceOrientationChangeEvent triggered: ' + JSON.stringify(event));
 		}
 
 	};
@@ -34,7 +37,7 @@ THREE.DeviceOrientationControls = function ( object ) {
 
 		scope.screenOrientation = window.orientation || 0;
 		if ( typeof socket !== 'undefined' ) {
-			socket.emit('client-log', '[DEBUG] DeviceOrientationControls: onScreenOrientationChangeEvent: orientation=' + (window.orientation || 0));
+			socket.emit('client-log', '[DEBUG] DeviceOrientationControls: onScreenOrientationChangeEvent triggered: orientation=' + (window.orientation || 0));
 		}
 
 	};
@@ -57,7 +60,7 @@ THREE.DeviceOrientationControls = function ( object ) {
 		return function ( quaternion, alpha, beta, gamma, orient ) {
 
 			if ( typeof socket !== 'undefined' ) {
-				socket.emit('client-log', '[DEBUG] DeviceOrientationControls: setObjectQuaternion called with alpha=' + alpha + ', beta=' + beta + ', gamma=' + gamma + ', orient=' + orient);
+				socket.emit('client-log', '[DEBUG] DeviceOrientationControls: setObjectQuaternion called with values: alpha=' + alpha + ', beta=' + beta + ', gamma=' + gamma + ', orient=' + orient);
 			}
 			euler.set( beta, alpha, - gamma, 'YXZ' );                       // 'ZXY' for the device, but 'YXZ' for us
 			if ( typeof socket !== 'undefined' ) {
@@ -69,11 +72,11 @@ THREE.DeviceOrientationControls = function ( object ) {
 			}
 			quaternion.multiply( q1 );                                      // camera looks out the back of the device, not the top
 			if ( typeof socket !== 'undefined' ) {
-				socket.emit('client-log', '[DEBUG] DeviceOrientationControls: Quaternion after multiply q1: ' + JSON.stringify(quaternion));
+				socket.emit('client-log', '[DEBUG] DeviceOrientationControls: Quaternion after multiplying by q1: ' + JSON.stringify(quaternion));
 			}
 			quaternion.multiply( q0.setFromAxisAngle( zee, - orient ) );    // adjust for screen orientation
 			if ( typeof socket !== 'undefined' ) {
-				socket.emit('client-log', '[DEBUG] DeviceOrientationControls: Quaternion after multiply q0: ' + JSON.stringify(quaternion));
+				socket.emit('client-log', '[DEBUG] DeviceOrientationControls: Quaternion after multiplying by q0: ' + JSON.stringify(quaternion));
 			}
 
 		}
@@ -89,10 +92,13 @@ THREE.DeviceOrientationControls = function ( object ) {
 
 		window.addEventListener( 'orientationchange', onScreenOrientationChangeEvent, false );
 		window.addEventListener( 'deviceorientation', onDeviceOrientationChangeEvent, false );
+		if ( typeof socket !== 'undefined' ) {
+			socket.emit('client-log', '[DEBUG] DeviceOrientationControls: Event listeners for orientationchange and deviceorientation added.');
+		}
 
 		scope.enabled = true;
 		if ( typeof socket !== 'undefined' ) {
-			socket.emit('client-log', '[DEBUG] DeviceOrientationControls: connect called. Event listeners added.');
+			socket.emit('client-log', '[DEBUG] DeviceOrientationControls: connect called. Enabled set to true.');
 		}
 
 	};
@@ -101,10 +107,13 @@ THREE.DeviceOrientationControls = function ( object ) {
 
 		window.removeEventListener( 'orientationchange', onScreenOrientationChangeEvent, false );
 		window.removeEventListener( 'deviceorientation', onDeviceOrientationChangeEvent, false );
+		if ( typeof socket !== 'undefined' ) {
+			socket.emit('client-log', '[DEBUG] DeviceOrientationControls: disconnect called. Event listeners removed.');
+		}
 
 		scope.enabled = false;
 		if ( typeof socket !== 'undefined' ) {
-			socket.emit('client-log', '[DEBUG] DeviceOrientationControls: disconnect called. Event listeners removed.');
+			socket.emit('client-log', '[DEBUG] DeviceOrientationControls: Enabled set to false in disconnect.');
 		}
 
 	};
@@ -112,7 +121,6 @@ THREE.DeviceOrientationControls = function ( object ) {
 	this.update = function () {
 
 		if ( scope.enabled === false ) return;
-
 		if ( typeof socket !== 'undefined' ) {
 			socket.emit('client-log', '[DEBUG] DeviceOrientationControls: update called.');
 		}
@@ -133,5 +141,8 @@ THREE.DeviceOrientationControls = function ( object ) {
 	};
 
 	this.connect();
+	if ( typeof socket !== 'undefined' ) {
+		socket.emit('client-log', '[DEBUG] DeviceOrientationControls: Constructor complete, connect() called.');
+	}
 
 };
