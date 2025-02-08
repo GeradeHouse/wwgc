@@ -59,11 +59,12 @@ var CAMERA_NEAR = 0.1
 var CAMERA_FAR = 100
 
 var camera, scene, renderer, composer
-var controls
+var controls // legacy controls fallback (OrbitControls)
+var deviceControls = null; // legacy device orientation controls fallback
 var element, container
 
 var clock = new THREE.Clock()
-var deviceControls = null;
+// dummyDevice is used by legacy DeviceOrientationControls
 var dummyDevice = new THREE.Object3D();
 var BLEND_FACTOR = 0.5;
 
@@ -103,23 +104,35 @@ function resize() {
   }
 }
 
+//
+// Legacy animate function (used in fallback mode)
+// When an immersive XR session is active, renderer.setAnimationLoop(animate) is used.
+//
 function animate(t) {
   var delta = clock.getDelta();
-  camera.updateProjectionMatrix();
-  controls.update(delta);
-  if (deviceControls && controls.state === controls.STATE.NONE) {
-    deviceControls.update();
-    camera.quaternion.copy(dummyDevice.quaternion);
-    // Log debug info every second to monitor headtracking updates
-    if (!window._lastDebug || (performance.now() - window._lastDebug) > 1000) {
-      window._lastDebug = performance.now();
-      console.log("[DEBUG] deviceControls updated, dummy quaternion:", dummyDevice.quaternion);
+  // In XR mode, the camera pose is updated automatically.
+  if (!renderer.xr.getSession()) {
+    camera.updateProjectionMatrix();
+    if (controls) {
+      controls.update(delta);
+    }
+    if (deviceControls && controls && controls.state === controls.STATE.NONE) {
+      deviceControls.update();
+      camera.quaternion.copy(dummyDevice.quaternion);
+      // Log debug info every second to monitor headtracking updates
+      if (!window._lastDebug || (performance.now() - window._lastDebug) > 1000) {
+        window._lastDebug = performance.now();
+        console.log("[DEBUG] deviceControls updated, dummy quaternion:", dummyDevice.quaternion);
+      }
     }
   }
   composer.render();
-  window.requestAnimationFrame(animate);
 }
 
+//
+// Legacy initialization for device orientation (fallback)
+// This function is only used if WebXR immersive-vr is not available.
+//
 function setOrientationControls(e) {
   console.log("setOrientationControls called with event:", e);
   // Changed check so that an alpha value of 0 is accepted.
@@ -141,34 +154,42 @@ function setOrientationControls(e) {
 
 console.log("3d_app.js loaded");
 
-// // Override console.log, console.warn, and console.error to send logs via socket.io
-// (function() {
-//   var oldLog = console.log;
-//   var oldWarn = console.warn;
-//   var oldError = console.error;
+//
+// New XR initialization function
+//
+async function initXRSession() {
+  if (navigator.xr) {
+    try {
+      const supported = await navigator.xr.isSessionSupported('immersive-vr');
+      if (supported) {
+        const session = await navigator.xr.requestSession('immersive-vr', { optionalFeatures: ['local-floor'] });
+        console.log("[DEBUG] XR session acquired:", session);
+        // Enable XR on the renderer
+        renderer.xr.enabled = true;
+        renderer.xr.setSession(session);
+        // Remove legacy controls and event listeners if present
+        if (controls) {
+          controls.dispose();
+          controls = null;
+        }
+        window.removeEventListener('deviceorientation', setOrientationControls, true);
+        // Use the XR animation loop instead of window.requestAnimationFrame
+        renderer.setAnimationLoop(animate);
+        return;
+      } else {
+        console.warn("immersive-vr session not supported. Falling back to legacy controls.");
+      }
+    } catch (e) {
+      console.error("Failed to start immersive-vr session:", e);
+    }
+  } else {
+    console.warn("navigator.xr not available. Falling back to legacy controls.");
+  }
+}
 
-//   console.log = function() {
-//     socket.emit('client-log', Array.from(arguments).join(' '));
-//     oldLog.apply(console, arguments);
-//   };
-
-//   console.warn = function() {
-//     socket.emit('client-warn', Array.from(arguments).join(' '));
-//     oldWarn.apply(console, arguments);
-//   };
-
-//   console.error = function() {
-//     socket.emit('client-error', Array.from(arguments).join(' '));
-//     oldError.apply(console, arguments);
-//   };
-// })();
-
-
-/**
- * Initializes the 3D scene with Cardboard device parameters
- * @param {WebSocket} ws - WebSocket connection for live updates
- * @param {Object} cardboard_device - Cardboard device parameters
- */
+//
+// Fallback initialization for Cardboard device parameters
+//
 function init_with_cardboard_device(ws, cardboard_device) {
   renderer = new THREE.WebGLRenderer();
   // renderer.setClearColor(0x000000, 1);
@@ -184,15 +205,7 @@ function init_with_cardboard_device(ws, cardboard_device) {
   // NOTE: CardboardStereoPass will ignore camera FOV and aspect ratio
   camera = new THREE.PerspectiveCamera(90, 1, CAMERA_NEAR, CAMERA_FAR)
   
-  // The following two event listeners were erroneously placed before 'controls' is defined.
-  // They have been commented out to preserve functionality and avoid errors.
-  // controls.addEventListener('start', function(event) {
-  //   console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
-  // });
-  // controls.addEventListener('end', function(event) {
-  //   console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
-  // });
-  
+  // Legacy OrbitControls (used only in fallback mode)
   camera.position.set(0, CAMERA_HEIGHT, 0)
   scene.add(camera)
 
@@ -213,6 +226,7 @@ function init_with_cardboard_device(ws, cardboard_device) {
     });
   }
 
+  // Legacy duplicate event listener blocks (preserved as comments)
 ;(function() {
   if (controls) {
     controls.addEventListener('start', function(event) {
@@ -235,7 +249,6 @@ function init_with_cardboard_device(ws, cardboard_device) {
   }
 })();
 
-
 (function() {
   if (controls) {
     controls.addEventListener('start', function(event) {
@@ -247,22 +260,10 @@ function init_with_cardboard_device(ws, cardboard_device) {
   }
 })();
 
-
 controls.addEventListener('start', function(event) {
   console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
 });
 controls.addEventListener('end', function(event) {
-  /* 
-  // The following inner duplicate block was removed to fix syntax errors.
-  if (controls) {
-    controls.addEventListener('start', function(event) {
-      console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
-    });
-    controls.addEventListener('end', function(event) {
-      console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
-    });
-  }
-  */
   console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
 });
 
@@ -273,116 +274,104 @@ controls.addEventListener('end', function(event) {
   console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
 });
 
-controls.addEventListener('start', function(event) {
-  // Removed duplicate inner event listener block.
-  console.log('[DEBUG] OrbitControls start: user initiated swipe', event);
+controls.noZoom = true
+controls.noPan = true
+
+// Legacy deviceorientation event for fallback headtracking
+window.addEventListener('deviceorientation', setOrientationControls, true)
+
+var light = new THREE.HemisphereLight(0x777777, 0x000000, 0.6)
+scene.add(light)
+
+// environment box with grid textures
+var box_width = 10  // i.e. surfaces are box_width/2 from camera
+var texture = THREE.ImageUtils.loadTexture(
+  'textures/patterns/box.png'
+)
+texture.wrapS = THREE.RepeatWrapping
+texture.wrapT = THREE.RepeatWrapping
+texture.repeat.set(box_width, box_width)
+var face_colors = [0xA020A0, 0x20A020, 0x50A0F0, 0x404040, 0xA0A0A0, 0xA0A020]
+var materialArray = []
+face_colors.forEach(function (c) {
+  materialArray.push(new THREE.MeshBasicMaterial({
+    map: texture,
+    color: c,
+    side: THREE.BackSide
+  }))
+})
+var env_cube = new THREE.Mesh(
+  new THREE.BoxGeometry(box_width, box_width, box_width),
+  new THREE.MeshFaceMaterial(materialArray)
+)
+scene.add(env_cube)
+
+var screen_params = CARDBOARD.findScreenParams()
+var cardboard_view = new CARDBOARD.CardboardView(
+  screen_params, cardboard_device)
+
+composer = new THREE.EffectComposer(renderer)
+
+composer.addPass(new THREE.CardboardStereoEffect(
+  cardboard_view, scene, camera))
+
+var barrel_distortion = new THREE.ShaderPass(THREE.CardboardBarrelDistortion)
+// TODO: Consider having red background only when FOV angle fields
+// are in focus.
+barrel_distortion.uniforms.backgroundColor.value =
+  new THREE.Vector4(1, 0, 0, 1)
+barrel_distortion.renderToScreen = true
+composer.addPass(barrel_distortion)
+
+// Using Socket.IO:
+// ws.on("message", function (data) {
+//   var val = JSON.parse(data);
+//   cardboard_view.device = CARDBOARD.uriToParams(val.params_uri)
+//   CARDBOARD.updateBarrelDistortion(barrel_distortion, cardboard_view,
+//     CAMERA_NEAR, CAMERA_FAR, val.show_lens_center)
+// })
+
+ws.on("message", function(val) {
+  if (typeof val === "string") {
+    val = JSON.parse(val);
+  }
+  console.log("[DEBUG] Received parameter update via socket.io:", val);
+  // Update the cardboard device parameters.
+  cardboard_view.device = CARDBOARD.uriToParams(val.params_uri);
+  CARDBOARD.updateBarrelDistortion(barrel_distortion, cardboard_view,
+    CAMERA_NEAR, CAMERA_FAR, val.show_lens_center);
+  // Remove the existing stereo effect pass if it exists.
+  if (composer.passes.length > 0) {
+    composer.removePass(composer.passes[0]);
+  }
+  // Create a new CardboardStereoEffect pass with updated parameters.
+  const stereoEffect = new THREE.CardboardStereoEffect(cardboard_view, scene, camera);
+  composer.addPass(stereoEffect);
+  // Reset the composer buffers.
+  composer.reset();
+  // Update the camera projection matrix.
+  camera.updateProjectionMatrix();
+  // If available, call the update method on the cardboard view.
+  if (typeof cardboard_view.update === 'function') {
+    cardboard_view.update();
+  }
+  // Force an immediate render.
+  composer.render();
+  console.log("[DEBUG] VR scene updated with new parameters.");
 });
-controls.addEventListener('end', function(event) {
-  console.log('[DEBUG] OrbitControls end: swipe interaction ended', event);
-});
+window.addEventListener('resize', resize, false)
+window.cardboardScene = {
+  composer: composer,
+  cardboard_view: cardboard_view,
+  camera: camera,
+  scene: scene,
+  barrel_distortion: barrel_distortion
+};
+window.setTimeout(resize, 1)
 
-/*
-    camera.position.x + 0.1,
-    camera.position.y,
-    camera.position.z
-  )
-*/
-
-  controls.noZoom = true
-  controls.noPan = true
-
-  window.addEventListener('deviceorientation', setOrientationControls, true)
-
-  var light = new THREE.HemisphereLight(0x777777, 0x000000, 0.6)
-  scene.add(light)
-
-  // environment box with grid textures
-  var box_width = 10  // i.e. surfaces are box_width/2 from camera
-  var texture = THREE.ImageUtils.loadTexture(
-    'textures/patterns/box.png'
-  )
-  texture.wrapS = THREE.RepeatWrapping
-  texture.wrapT = THREE.RepeatWrapping
-  texture.repeat.set(box_width, box_width)
-  var face_colors = [0xA020A0, 0x20A020, 0x50A0F0, 0x404040, 0xA0A0A0, 0xA0A020]
-  var materialArray = []
-  face_colors.forEach(function (c) {
-    materialArray.push(new THREE.MeshBasicMaterial({
-      map: texture,
-      color: c,
-      side: THREE.BackSide
-    }))
-  })
-  var env_cube = new THREE.Mesh(
-    new THREE.BoxGeometry(box_width, box_width, box_width),
-    new THREE.MeshFaceMaterial(materialArray)
-  )
-  scene.add(env_cube)
-
-  var screen_params = CARDBOARD.findScreenParams()
-  var cardboard_view = new CARDBOARD.CardboardView(
-    screen_params, cardboard_device)
-
-  composer = new THREE.EffectComposer(renderer)
-
-  composer.addPass(new THREE.CardboardStereoEffect(
-    cardboard_view, scene, camera))
-
-  var barrel_distortion = new THREE.ShaderPass(THREE.CardboardBarrelDistortion)
-  // TODO: Consider having red background only when FOV angle fields
-  // are in focus.
-  barrel_distortion.uniforms.backgroundColor.value =
-    new THREE.Vector4(1, 0, 0, 1)
-  barrel_distortion.renderToScreen = true
-  composer.addPass(barrel_distortion)
-
-  // Using Socket.IO:
-  // ws.on("message", function (data) {
-  //   var val = JSON.parse(data);
-  //   cardboard_view.device = CARDBOARD.uriToParams(val.params_uri)
-  //   CARDBOARD.updateBarrelDistortion(barrel_distortion, cardboard_view,
-  //     CAMERA_NEAR, CAMERA_FAR, val.show_lens_center)
-  // })
-
-  ws.on("message", function(val) {
-    if (typeof val === "string") {
-      val = JSON.parse(val);
-    }
-    console.log("[DEBUG] Received parameter update via socket.io:", val);
-    // Update the cardboard device parameters.
-    cardboard_view.device = CARDBOARD.uriToParams(val.params_uri);
-    CARDBOARD.updateBarrelDistortion(barrel_distortion, cardboard_view,
-      CAMERA_NEAR, CAMERA_FAR, val.show_lens_center);
-    // Remove the existing stereo effect pass if it exists.
-    if (composer.passes.length > 0) {
-      composer.removePass(composer.passes[0]);
-    }
-    // Create a new CardboardStereoEffect pass with updated parameters.
-    const stereoEffect = new THREE.CardboardStereoEffect(cardboard_view, scene, camera);
-    composer.addPass(stereoEffect);
-    // Reset the composer buffers.
-    composer.reset();
-    // Update the camera projection matrix.
-    camera.updateProjectionMatrix();
-    // If available, call the update method on the cardboard view.
-    if (typeof cardboard_view.update === 'function') {
-      cardboard_view.update();
-    }
-    // Force an immediate render.
-    composer.render();
-    console.log("[DEBUG] VR scene updated with new parameters.");
-  });
-  window.addEventListener('resize', resize, false)
-  window.cardboardScene = {
-    composer: composer,
-    cardboard_view: cardboard_view,
-    camera: camera,
-    scene: scene,
-    barrel_distortion: barrel_distortion
-  };
-  window.setTimeout(resize, 1)
-
-  animate()
+// Use legacy animation loop if XR session is not active.
+// (When XR session is active, renderer.setAnimationLoop(animate) is used in initXRSession.)
+window.requestAnimationFrame(animate)
 }
 
 /**
@@ -442,7 +431,16 @@ function init() {
 
   // Initialize with default parameters
   const device = CARDBOARD.uriToParams('http://google.com/cardboard/cfg?p=CgN4eXMSBnBpY28gdR0xCCw9JY_CdT0qEAAASEIAAEhCAABcQgAAXEJYADUpXA89OggUrkc_SOGaP1AAYAA')
-  init_with_cardboard_device(socket, device)
+  
+  // Check for WebXR support and request immersive-vr session if available.
+  initXRSession().then(() => {
+    // If XR session started, we use the XR loop.
+    // Otherwise, fallback to legacy initialization.
+    if (!renderer.xr.getSession()) {
+      init_with_cardboard_device(socket, device);
+    }
+  });
+  
   socket.onerror = function(e) {
     console.error('[DEBUG] socket.io error (3D app):', e);
   };
