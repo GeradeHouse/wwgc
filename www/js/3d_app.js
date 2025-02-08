@@ -299,7 +299,7 @@ function hasWebGl() {
 
 /**
  * Initializes the 3D application
- * Sets up WebSocket connection and initializes the scene
+ * Sets up WebSocket connection and initializes the scene < Let's see if this works!
  */
 function init() {
   if (!hasWebGl()) {
